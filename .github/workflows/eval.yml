@@ -1,0 +1,56 @@
+name: Agent Evals
+
+on:
+  pull_request:
+    paths:
+      - 'lib/tools/**'
+      - 'lib/agent/**'
+      - 'lib/policy/**'
+      - 'lib/approvals/**'
+      - 'lib/payment/**'
+      - 'lib/domain/**'
+      - 'evals/**'
+      - 'package.json'
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:run
+
+  evals:
+    name: Trajectory evals
+    runs-on: ubuntu-latest
+    needs: unit
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+      BRAINTRUST_PROJECT: coworker-evals
+      EVAL_MODEL: claude-sonnet-4-5
+      APPROVAL_TOKEN_SECRET: ci-approval-secret-not-used-for-real
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Skip if API keys are absent
+        id: gate
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$BRAINTRUST_API_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "API keys absent; skipping eval (configure ANTHROPIC_API_KEY + BRAINTRUST_API_KEY repo secrets to enable)."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run eval suite
+        if: steps.gate.outputs.skip != 'true'
+        run: npm run eval

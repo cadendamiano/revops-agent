@@ -1,0 +1,12 @@
+node_modules/
+output/
+.next/
+.env
+.env.local
+.secrets.local.json
+.vercel
+*.tsbuildinfo
+.DS_Store
+electron-dist/
+electron-next/
+dist-electron/

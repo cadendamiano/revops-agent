@@ -1,0 +1,16 @@
+export const Icon = {
+  Plus:    () => (<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>),
+  Send:    () => (<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 6L10.5 1.5L8 10.5L5.5 7L1.5 6Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>),
+  Arrow:   () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  Check:   () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8.5 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  Close:   () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>),
+  Spinner: () => (<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ animation: 'spin 0.9s linear infinite' }}><circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" strokeDasharray="6 4" strokeLinecap="round"/></svg>),
+  Doc:     () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 1h4l2 2v6H2V1z" stroke="currentColor" strokeWidth="1" fill="none"/><path d="M6 1v2h2" stroke="currentColor" strokeWidth="1"/></svg>),
+  Table:   () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="7" height="7" stroke="currentColor" strokeWidth="1"/><path d="M1.5 4h7M4 1.5v7" stroke="currentColor" strokeWidth="1"/></svg>),
+  Chart:   () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5h7M2.5 8V5M5 8V3M7.5 8V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>),
+  Rule:    () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2h6M2 5h6M2 8h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>),
+  Flow:    () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="3" width="3" height="4" stroke="currentColor" strokeWidth="1"/><rect x="6" y="3" width="3" height="4" stroke="currentColor" strokeWidth="1"/><path d="M4 5h2" stroke="currentColor" strokeWidth="1"/></svg>),
+  Code:    () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 3L1.5 5L3.5 7M6.5 3L8.5 5L6.5 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  Gear:    () => (<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="1.9" stroke="currentColor" strokeWidth="1.2"/><path d="M6 1.2v1.3M6 9.5v1.3M1.2 6h1.3M9.5 6h1.3M2.6 2.6l.9.9M8.5 8.5l.9.9M2.6 9.4l.9-.9M8.5 3.5l.9-.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>),
+  Trash:   () => (<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 2.8h7M3.8 2.8V1.8h2.4v1M2.6 2.8l.4 6.2h4l.4-6.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+};
