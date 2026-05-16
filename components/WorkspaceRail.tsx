@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useStore, type Workspace, type Artifact } from '@/lib/store';
+import { isCanvasArtifactKind } from '@/lib/flows';
 import { Icon } from './primitives/Icon';
 
 const Clock = () => (
@@ -57,6 +58,18 @@ function WorkspaceList() {
   const workspaces = useStore(s => s.workspaces);
   const setView = useStore(s => s.setWorkspaceView);
   const newWorkspace = useStore(s => s.newWorkspace);
+  const canvasOpen = useStore(s => s.canvasOpen);
+  const setCanvasOpen = useStore(s => s.setCanvasOpen);
+  const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
+  const activeWorkspaceThreadId = useStore(s => s.activeWorkspaceThreadId);
+  const hasCanvasArtifact = useStore(s => {
+    if (!s.activeWorkspaceId || !s.activeWorkspaceThreadId) return false;
+    const ws = s.workspaces.find(w => w.id === s.activeWorkspaceId);
+    const th = ws?.threads.find(t => t.id === s.activeWorkspaceThreadId);
+    return !!th?.artifacts.some(a => isCanvasArtifactKind(a.kind));
+  });
+  // Reference to silence unused-var lint without changing existing behavior.
+  void activeWorkspaceId; void activeWorkspaceThreadId;
   const [creating, setCreating] = useState(false);
   const [draftName, setDraftName] = useState('');
 
@@ -72,6 +85,16 @@ function WorkspaceList() {
       <button className="ws-history-btn" onClick={() => setView('history')}>
         <span className="ws-history-icon"><Clock /></span>
         <span>History</span>
+      </button>
+
+      <button
+        className={'ws-history-btn' + (canvasOpen ? ' active' : '')}
+        onClick={() => setCanvasOpen(!canvasOpen)}
+        disabled={!hasCanvasArtifact}
+        title={hasCanvasArtifact ? 'Toggle Canvas drawer' : 'No canvas artifacts in this thread'}
+      >
+        <span className="ws-history-icon"><Icon.Doc /></span>
+        <span>Canvas</span>
       </button>
 
       <div className="ws-section">
@@ -162,13 +185,16 @@ function ArtifactList({
   onOpen: (workspaceId: string, threadId: string, artifactId: string) => void;
 }) {
   const activeArtifact = useStore(s => s.activeArtifact);
+  // Inline artifacts live in the thread; only canvas kinds belong in the rail.
+  const canvasArtifacts = artifacts.filter(a => isCanvasArtifactKind(a.kind));
   const grouped = new Map<string, Artifact[]>();
-  for (const a of artifacts) {
+  for (const a of canvasArtifacts) {
     const label = KIND_LABELS[a.kind] ?? 'Other';
     const list = grouped.get(label);
     if (list) list.push(a);
     else grouped.set(label, [a]);
   }
+  if (canvasArtifacts.length === 0) return null;
 
   return (
     <div className="ws-artifact-list">
@@ -280,7 +306,10 @@ function WorkspaceItem({ workspace }: { workspace: Workspace }) {
         <div className="ws-workspace-children">
           {workspace.threads.map(t => {
             const isActive = isActiveWs && activeThreadId === t.id;
-            const hasArtifacts = t.artifacts.length > 0;
+            // Rail only surfaces canvas artifacts; inline artifacts stay in
+            // the thread and shouldn't drive the chevron / count here.
+            const canvasArtifactCount = t.artifacts.filter(a => isCanvasArtifactKind(a.kind)).length;
+            const hasArtifacts = canvasArtifactCount > 0;
             const isThreadExpanded = expandedThreadIds.has(t.id);
 
             return (
@@ -334,7 +363,7 @@ function WorkspaceItem({ workspace }: { workspace: Workspace }) {
                     >{t.title}</span>
                   )}
                   {hasArtifacts && (
-                    <span className="ws-thread-meta">{t.artifacts.length}</span>
+                    <span className="ws-thread-meta">{canvasArtifactCount}</span>
                   )}
                   <button
                     className="icon-btn ws-thread-del"

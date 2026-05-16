@@ -31,7 +31,7 @@ Inline-SVG icon set. 14 glyphs sized 10–12px, `currentColor`-driven so they in
 
 - **Props:** none — exported as an object (`Icon.Plus`, `Icon.Send`, …) where each member is a render function.
 - **Glyphs:** `Plus`, `Send`, `Arrow`, `Check`, `Close`, `Spinner` (animated), `Doc`, `Table`, `Chart`, `Rule`, `Flow`, `Code`, `Gear`, `Trash`.
-- **Used by:** `Rail`, `WorkspaceRail`, `Turn`, `ArtifactPane`, `SettingsPanel`, `DevConfigPanel`, `CredentialsColumn`, `app/settings/page.tsx`, and `APTable` (internal).
+- **Used by:** `Rail`, `WorkspaceRail`, `Turn`, `CanvasPane`, `SettingsPanel`, `DevConfigPanel`, `CredentialsColumn`, `app/settings/page.tsx`, and `APTable` (internal).
 - **Why a primitive:** keeps icon weight / stroke / scale uniform without bringing in an icon library.
 
 ### StatusPill — `StatusPill.tsx`

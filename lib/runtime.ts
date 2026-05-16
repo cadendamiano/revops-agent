@@ -1,6 +1,13 @@
 'use client';
 
-import { FLOWS, LOGISTICS_FLOWS, type ArtifactKind, type Flow, type FlowStep } from './flows';
+import {
+  FLOWS,
+  LOGISTICS_FLOWS,
+  isInlineArtifactKind,
+  type ArtifactKind,
+  type Flow,
+  type FlowStep,
+} from './flows';
 import { newId, type Turn } from './turns';
 import { useStore, getActiveWorkspaceThread, type ApprovalPayload } from './store';
 import { MODEL_TOOLS, INTERNAL_TOOLS } from './tools';
@@ -151,6 +158,17 @@ function executeStep(flow: Flow, step: FlowStep, mult: number) {
         createdBy: 'Coworker',
       }]));
     }
+    const kind = flow.artifact?.kind;
+    if (kind && isInlineArtifactKind(kind)) {
+      // Inline kinds render in the thread; do not surface a clickable card or
+      // open Canvas.
+      a.addTurn({
+        id: newId('ia'),
+        kind: 'inline-artifact',
+        artifactId: step.artifactId,
+      });
+      return;
+    }
     a.addTurn({
       id: newId('ac'),
       kind: 'artifact-card',
@@ -160,6 +178,13 @@ function executeStep(flow: Flow, step: FlowStep, mult: number) {
       meta: step.meta,
       icon: step.icon,
     });
+    // Canvas kinds: auto-open Canvas in demo mode; testing mode requires
+    // an explicit click on the card or the rail toggle.
+    const state = useStore.getState();
+    if (state.mode === 'demo') {
+      state.setActiveArtifact(step.artifactId);
+      state.setCanvasOpen(true);
+    }
     return;
   }
   if (step.kind === 'artifact-enrich') {
@@ -518,17 +543,20 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
             ...(ev.script ? { script: ev.script } : {}),
             ...(ev.dataJson ? { dataJson: ev.dataJson } : {}),
           };
-          const cardTurn: Turn = {
-            id: newId('ac'),
-            kind: 'artifact-card',
-            artifactId: artId,
-            title: ev.title ?? ev.label ?? 'Artifact',
-            sub: (ev.sub ?? 'GENERATED').toUpperCase(),
-            meta: ev.meta ?? '',
-            icon: ev.icon ?? '◫',
-          };
-          // Single batched mutation: artifact + activeArtifact + card turn.
-          useStore.getState().createArtifactFromEvent(artId, artifact, cardTurn);
+          // Inline kinds skip the clickable card and never open Canvas; the
+          // store action handles mode-gated auto-open for canvas kinds.
+          const turn: Turn = isInlineArtifactKind(ev.kind)
+            ? { id: newId('ia'), kind: 'inline-artifact', artifactId: artId }
+            : {
+                id: newId('ac'),
+                kind: 'artifact-card',
+                artifactId: artId,
+                title: ev.title ?? ev.label ?? 'Artifact',
+                sub: (ev.sub ?? 'GENERATED').toUpperCase(),
+                meta: ev.meta ?? '',
+                icon: ev.icon ?? '◫',
+              };
+          useStore.getState().createArtifactFromEvent(artId, artifact, turn);
         } else if (ev.type === 'approval') {
           const payload = ev.payload as ApprovalPayload;
           useStore.getState().setApprovalPayloadInActiveWorkspaceThread(payload.batchId, payload);

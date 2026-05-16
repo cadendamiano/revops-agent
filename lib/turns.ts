@@ -22,6 +22,7 @@ export type Turn =
       simulated?: boolean;
     }
   | { id: string; kind: 'suggest'; items: string[] }
+  | { id: string; kind: 'inline-artifact'; artifactId: string }
   | {
       id: string;
       kind: 'data-table';

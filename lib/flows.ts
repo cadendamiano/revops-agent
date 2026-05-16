@@ -10,6 +10,31 @@ export type ArtifactKind =
   | 'pipeline-forecast'
   | 'bulk-update-preview';
 
+// Artifact rendering surface. Inline kinds render in the chat thread; canvas
+// kinds render in the right-side CanvasPane drawer. Every ArtifactKind belongs
+// to exactly one family — the unit test in tests/lib/sfdc-flows.test.ts
+// enforces full coverage.
+export const INLINE_ARTIFACT_KINDS = [
+  'opp-health',
+  'pipeline-forecast',
+  'bulk-update-preview',
+] as const satisfies readonly ArtifactKind[];
+
+export const CANVAS_ARTIFACT_KINDS = [
+  'document',
+  'spreadsheet',
+  'slides',
+  'custom-dashboard',
+] as const satisfies readonly ArtifactKind[];
+
+export function isInlineArtifactKind(k: ArtifactKind): boolean {
+  return (INLINE_ARTIFACT_KINDS as readonly ArtifactKind[]).includes(k);
+}
+
+export function isCanvasArtifactKind(k: ArtifactKind): boolean {
+  return (CANVAS_ARTIFACT_KINDS as readonly ArtifactKind[]).includes(k);
+}
+
 export type ToolRowSpec = {
   verb: 'GET' | 'POST' | 'EXEC';
   path: string;

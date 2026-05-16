@@ -1,19 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/lib/store';
 import { Icon } from './primitives/Icon';
-import { HtmlArtifact } from './artifacts/HtmlArtifact';
-import { DocumentArtifact } from './artifacts/DocumentArtifact';
-import { SpreadsheetArtifact } from './artifacts/SpreadsheetArtifact';
-import { SlidesArtifact } from './artifacts/SlidesArtifact';
-import { OppHealthScorecard } from './artifacts/OppHealthScorecard';
-import { PipelineForecast } from './artifacts/PipelineForecast';
-import { BulkUpdatePreview } from './artifacts/BulkUpdatePreview';
 import { ArtifactPreview } from './ArtifactPreview';
 import { ArtifactCode } from './ArtifactCode';
-import type { ArtifactKind } from '@/lib/flows';
+import { ArtifactRenderer } from './artifacts/ArtifactRenderer';
+import { isCanvasArtifactKind, type ArtifactKind } from '@/lib/flows';
 import type { Artifact, ArtifactStatus } from '@/lib/store';
 
 const EMPTY_ARTIFACTS: Artifact[] = [];
@@ -22,9 +16,6 @@ function glyphFor(kind: ArtifactKind) {
   if (kind === 'spreadsheet') return <Icon.Table />;
   if (kind === 'custom-dashboard') return <Icon.Chart />;
   if (kind === 'slides') return <Icon.Doc />;
-  if (kind === 'opp-health') return <Icon.Table />;
-  if (kind === 'pipeline-forecast') return <Icon.Chart />;
-  if (kind === 'bulk-update-preview') return <Icon.Table />;
   return <Icon.Doc />;
 }
 
@@ -47,17 +38,19 @@ function timeAgo(ts: number | undefined): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export function ArtifactPane() {
+export function CanvasPane() {
   const showCodeView = useStore(s => s.tweaks.showCodeView);
   const setWsThreadArtifacts = useStore(s => s.setArtifactsInActiveWorkspaceThread);
   const mode = useStore(s => s.mode);
 
   const active = useStore(s => s.activeArtifact);
   const setActive = useStore(s => s.setActiveArtifact);
+  const canvasOpen = useStore(s => s.canvasOpen);
+  const setCanvasOpen = useStore(s => s.setCanvasOpen);
 
   const [view, setView] = useState<ViewTab>('logic');
 
-  const artifacts = useStore(
+  const allArtifacts = useStore(
     useShallow((s) => {
       if (!s.activeWorkspaceId || !s.activeWorkspaceThreadId) return EMPTY_ARTIFACTS;
       const ws = s.workspaces.find(w => w.id === s.activeWorkspaceId);
@@ -66,8 +59,13 @@ export function ArtifactPane() {
     })
   );
 
+  const artifacts = useMemo(
+    () => allArtifacts.filter(a => isCanvasArtifactKind(a.kind)),
+    [allArtifacts]
+  );
+
   const cur = artifacts.find(a => a.id === active);
-  const isOpen = !!active;
+  const isOpen = canvasOpen;
 
   useEffect(() => {
     setView('logic');
@@ -78,12 +76,12 @@ export function ArtifactPane() {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        setActive(null);
+        setCanvasOpen(false);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, setActive]);
+  }, [isOpen, setCanvasOpen]);
 
   const closeOne = (id: string) => {
     setWsThreadArtifacts(prev => prev.filter(x => x.id !== id));
@@ -94,7 +92,7 @@ export function ArtifactPane() {
     <>
       <div
         className={'artifact-scrim' + (isOpen ? ' open' : '')}
-        onClick={() => setActive(null)}
+        onClick={() => setCanvasOpen(false)}
       />
       <section className={'artifact-pane' + (isOpen ? ' open' : '')}>
         <div className="artifact-tabs">
@@ -109,7 +107,7 @@ export function ArtifactPane() {
                 fontSize: 11.5,
               }}
             >
-              Artifacts · nothing open
+              Canvas · nothing open
             </div>
           ) : (
             artifacts.map(a => (
@@ -139,8 +137,8 @@ export function ArtifactPane() {
             <button
               className="icon-btn artifact-drawer-close"
               title="Close panel (Esc)"
-              aria-label="Close artifact panel"
-              onClick={() => setActive(null)}
+              aria-label="Close canvas panel"
+              onClick={() => setCanvasOpen(false)}
             >
               <Icon.Close />
             </button>
@@ -185,19 +183,11 @@ export function ArtifactPane() {
               <div className="artifact-body">
                 {view === 'preview' && <ArtifactPreview artifact={cur} />}
                 {view === 'code' && <ArtifactCode artifact={cur} />}
-                {view === 'logic' && cur.kind === 'spreadsheet' && (
-                  <SpreadsheetArtifact artifact={cur} />
-                )}
-                {view === 'logic' && cur.kind === 'custom-dashboard' && <HtmlArtifact artifact={cur} />}
-                {view === 'logic' && cur.kind === 'document' && <DocumentArtifact artifact={cur} />}
-                {view === 'logic' && cur.kind === 'slides' && <SlidesArtifact artifact={cur} />}
-                {view === 'logic' && cur.kind === 'opp-health' && <OppHealthScorecard artifact={cur} />}
-                {view === 'logic' && cur.kind === 'pipeline-forecast' && <PipelineForecast artifact={cur} />}
-                {view === 'logic' && cur.kind === 'bulk-update-preview' && <BulkUpdatePreview artifact={cur} />}
+                {view === 'logic' && <ArtifactRenderer artifact={cur} />}
               </div>
             </>
           ) : (
-            <EmptyArtifact />
+            <EmptyCanvas />
           )}
         </div>
       </section>
@@ -205,18 +195,18 @@ export function ArtifactPane() {
   );
 }
 
-function EmptyArtifact() {
+function EmptyCanvas() {
   return (
     <div className="artifact-empty">
       <div>
         <div className="glyph">◫</div>
         <div>
-          Artifacts the coworker creates
+          Canvas artifacts the coworker creates
           <br />
           open here side-by-side.
         </div>
         <div style={{ marginTop: 12, color: 'var(--ink-3)' }}>
-          Spreadsheets · Documents · Slides · Dashboards
+          Documents · Spreadsheets · Slides · Dashboards
         </div>
       </div>
     </div>

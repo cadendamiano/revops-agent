@@ -531,6 +531,42 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 .artifact-card:hover .artifact-card-foot .cta{ background: oklch(0.34 0.10 195); }
 .artifact-card.active .artifact-card-foot .cta{ background: oklch(0.34 0.10 195); }
 
+/* inline artifact (rendered directly in the thread, no card click-through) */
+.inline-artifact{
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  width: 100%;
+  max-width: 720px;
+  box-shadow: 0 1px 0 rgba(15,20,25,0.02), 0 4px 12px rgba(15,20,25,0.04);
+}
+.inline-artifact-header{
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--surface-2) 50%, transparent);
+  font-family: var(--mono);
+}
+.inline-artifact-kind{
+  font-size: 10.5px; color: var(--ink-4);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.inline-artifact-label{
+  font-size: 12px; color: var(--ink-2);
+}
+.inline-artifact-spacer{ flex: 1; }
+.inline-artifact-open{
+  color: var(--ink-3);
+}
+.inline-artifact-open:hover{ color: var(--teal-ink); }
+.inline-artifact-body{
+  max-height: 520px;
+  overflow: auto;
+  padding: 12px 14px;
+}
+
 /* building / loading placeholder */
 .artifact-building{
   margin-top: 8px;

@@ -1,14 +1,16 @@
 'use client';
 
 import { memo, useCallback, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { ToolRow } from './primitives/ToolRow';
 import { ApprovalCard } from './primitives/ApprovalCard';
 import { DataTable } from './primitives/DataTable';
 import { Icon } from './primitives/Icon';
 import { Markdown } from './primitives/Markdown';
 import { ArtifactThumb } from './ArtifactThumb';
+import { ArtifactRenderer } from './artifacts/ArtifactRenderer';
 import type { Turn as TurnType } from '@/lib/turns';
-import type { ApprovalState } from '@/lib/store';
+import type { Artifact, ApprovalState } from '@/lib/store';
 import { useStore } from '@/lib/store';
 import type { ArtifactKind } from '@/lib/flows';
 
@@ -205,6 +207,10 @@ function TurnInner({
     );
   }
 
+  if (turn.kind === 'inline-artifact') {
+    return <InlineArtifactTurn artifactId={turn.artifactId} />;
+  }
+
   if (turn.kind === 'suggest') {
     return (
       <div className="msg agent fade-in">
@@ -238,6 +244,53 @@ function TurnInner({
 }
 
 export const Turn = memo(TurnInner);
+
+type InlineArtifactTurnProps = { artifactId: string };
+
+function InlineArtifactTurn({ artifactId }: InlineArtifactTurnProps) {
+  const artifact = useStore(
+    useShallow((s): Artifact | undefined => {
+      if (!s.activeWorkspaceId || !s.activeWorkspaceThreadId) return undefined;
+      const ws = s.workspaces.find(w => w.id === s.activeWorkspaceId);
+      const th = ws?.threads.find(t => t.id === s.activeWorkspaceThreadId);
+      return th?.artifacts.find(a => a.id === artifactId);
+    })
+  );
+  const setActiveArtifact = useStore(s => s.setActiveArtifact);
+  const setCanvasOpen = useStore(s => s.setCanvasOpen);
+
+  if (!artifact) return null;
+
+  const kindLabel = ARTIFACT_KIND_LABEL[artifact.kind] ?? artifact.kind;
+
+  return (
+    <div className="msg agent fade-in">
+      <div className="msg-body">
+        <div className="inline-artifact">
+          <div className="inline-artifact-header">
+            <span className="inline-artifact-kind">{kindLabel}</span>
+            <span className="inline-artifact-label">{artifact.label}</span>
+            <span className="inline-artifact-spacer" />
+            <button
+              className="icon-btn inline-artifact-open"
+              title="Open in Canvas"
+              aria-label="Open in Canvas"
+              onClick={() => {
+                setActiveArtifact(artifact.id);
+                setCanvasOpen(true);
+              }}
+            >
+              <Icon.Arrow />
+            </button>
+          </div>
+          <div className="inline-artifact-body">
+            <ArtifactRenderer artifact={artifact} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ArtifactOfferProps = {
   turn: Extract<TurnType, { kind: 'artifact-offer' }>;

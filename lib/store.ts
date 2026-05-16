@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Turn } from './turns';
 import type { ArtifactKind, FlowStep } from './flows';
+import { isCanvasArtifactKind } from './flows';
 import { SEED_WORKSPACES } from './data';
 import type { Shortcut } from './shortcuts';
 import {
@@ -97,6 +98,7 @@ export type UsageSample = {
 type State = {
   tweaks: Tweaks;
   activeArtifact: string | null;
+  canvasOpen: boolean;
   streaming: boolean;
   composer: string;
   settingsStatus: SettingsStatus | null;
@@ -122,6 +124,7 @@ type State = {
   setComposer: (s: string) => void;
   setStreaming: (b: boolean) => void;
   setActiveArtifact: (id: string | null) => void;
+  setCanvasOpen: (b: boolean) => void;
 
   setMode: (m: Mode) => void;
   activateArtifact: (id: string) => void;
@@ -139,7 +142,7 @@ type State = {
   updateTurnInActiveWorkspaceThread: (id: string, patch: Partial<Turn>) => void;
   removeTurnsByKindInActiveWorkspaceThread: (kind: Turn['kind']) => void;
   setArtifactsInActiveWorkspaceThread: (fn: (prev: Artifact[]) => Artifact[]) => void;
-  createArtifactFromEvent: (artId: string, artifact: Artifact, cardTurn: Turn) => void;
+  createArtifactFromEvent: (artId: string, artifact: Artifact, cardTurn: Turn | null) => void;
   setApprovalInActiveWorkspaceThread: (batchId: string, state: ApprovalState) => void;
   setApprovalPayloadInActiveWorkspaceThread: (batchId: string, payload: ApprovalPayload) => void;
   deleteWorkspaceThread: (workspaceId: string, threadId: string) => void;
@@ -183,6 +186,7 @@ export const useStore = create<State>()(
     (set) => ({
       tweaks: DEFAULT_TWEAKS,
       activeArtifact: null,
+      canvasOpen: false,
       streaming: false,
       composer: '',
       settingsStatus: null,
@@ -234,9 +238,10 @@ export const useStore = create<State>()(
       setComposer: (composer) => set({ composer }),
       setStreaming: (streaming) => set({ streaming }),
       setActiveArtifact: (id) => set({ activeArtifact: id }),
+      setCanvasOpen: (b) => set({ canvasOpen: b }),
 
       setMode: (mode) =>
-        set({ mode, streaming: false, composer: '', activeArtifact: null }),
+        set({ mode, streaming: false, composer: '', activeArtifact: null, canvasOpen: false }),
 
       activateArtifact: (id) =>
         set(s => {
@@ -444,8 +449,16 @@ export const useStore = create<State>()(
         set(s => {
           if (!s.activeWorkspaceId || !s.activeWorkspaceThreadId) return s;
           const CONTENT_FIELDS = ['label', 'title', 'html', 'css', 'script', 'dataJson', 'filter'] as const;
+          const isCanvas = isCanvasArtifactKind(artifact.kind);
+          // Canvas artifacts become the active selection; inline artifacts
+          // do not steal selection from a canvas artifact the user is viewing.
+          const nextActive = isCanvas ? artId : s.activeArtifact;
+          // Auto-open Canvas only for canvas kinds in demo mode. Testing mode
+          // requires explicit user action via the rail toggle or card click.
+          const nextCanvasOpen = isCanvas && s.mode === 'demo' ? true : s.canvasOpen;
           return {
-            activeArtifact: artId,
+            activeArtifact: nextActive,
+            canvasOpen: nextCanvasOpen,
             workspaces: s.workspaces.map(w =>
               w.id === s.activeWorkspaceId
                 ? {
@@ -466,7 +479,7 @@ export const useStore = create<State>()(
                               return { ...p, ...patch };
                             })
                           : [...th.artifacts, artifact],
-                        turns: exists ? th.turns : [...th.turns, cardTurn],
+                        turns: exists || !cardTurn ? th.turns : [...th.turns, cardTurn],
                       };
                     }),
                   }
@@ -545,7 +558,12 @@ export const useStore = create<State>()(
         })),
 
       openWorkspaceArtifact: (workspaceId, threadId, artifactId) =>
-        set({ activeWorkspaceId: workspaceId, activeWorkspaceThreadId: threadId, activeArtifact: artifactId }),
+        set({
+          activeWorkspaceId: workspaceId,
+          activeWorkspaceThreadId: threadId,
+          activeArtifact: artifactId,
+          canvasOpen: true,
+        }),
 
       addWorkspaceFile: (workspaceId, file) =>
         set(s => ({
@@ -576,7 +594,7 @@ export const useStore = create<State>()(
     {
       name: 'bcw:state',
       storage: createJSONStorage(() => localStorage),
-      version: 9,
+      version: 10,
       migrate: (persisted: any, fromVersion: number) => {
         if (persisted && fromVersion < 2) {
           persisted.tweaks = { ...DEFAULT_TWEAKS, ...(persisted.tweaks ?? {}) };
@@ -617,6 +635,10 @@ export const useStore = create<State>()(
             }
           }
         }
+        if (persisted && fromVersion < 10) {
+          // Canvas drawer starts closed after the inline/canvas split.
+          persisted.canvasOpen = false;
+        }
         if (persisted && fromVersion < 9) {
           // phase-a: drop BILL-coupled fields from persisted state.
           if (persisted.tweaks) {
@@ -638,6 +660,7 @@ export const useStore = create<State>()(
       partialize: (s) => ({
         tweaks: s.tweaks,
         activeArtifact: s.activeArtifact,
+        canvasOpen: s.canvasOpen,
         mode: s.mode,
         workspaces: s.workspaces.map(w => ({
           ...w,

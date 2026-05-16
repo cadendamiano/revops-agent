@@ -9,7 +9,7 @@ import { TopBar } from '@/components/TopBar';
 import { Rail } from '@/components/Rail';
 import { Composer } from '@/components/Composer';
 import { Turn } from '@/components/Turn';
-import { ArtifactPane } from '@/components/ArtifactPane';
+import { CanvasPane } from '@/components/CanvasPane';
 import { ResizeHandle } from '@/components/ResizeHandle';
 import { DevConfigPanel } from '@/components/DevConfigPanel';
 
@@ -20,6 +20,8 @@ export default function Page() {
   const activeWorkspaceThreadId = useStore(s => s.activeWorkspaceThreadId);
   const activeArtifact = useStore(s => s.activeArtifact);
   const setActiveArtifact = useStore(s => s.setActiveArtifact);
+  const canvasOpen = useStore(s => s.canvasOpen);
+  const setCanvasOpen = useStore(s => s.setCanvasOpen);
   const setComposer = useStore(s => s.setComposer);
   const accentHue = useStore(s => s.tweaks.accentHue);
   const newWorkspaceThread = useStore(s => s.newWorkspaceThread);
@@ -130,7 +132,10 @@ export default function Page() {
               onApprove={handleApprove}
               onReject={handleReject}
               activeArtifact={activeArtifact}
-              onOpenArtifact={setActiveArtifact}
+              onOpenArtifact={(id) => {
+                setActiveArtifact(id);
+                setCanvasOpen(true);
+              }}
               onSuggestion={setComposer}
               onChipSubmit={handleChipSubmit}
               onFormAnswer={handleFormAnswer}
@@ -141,9 +146,11 @@ export default function Page() {
         <Composer />
       </main>
 
-      <ResizeHandle onDelta={d => setConvoW(w => Math.max(280, w + d))} />
+      {canvasOpen && (
+        <ResizeHandle onDelta={d => setConvoW(w => Math.max(280, w + d))} />
+      )}
 
-      <ArtifactPane />
+      <CanvasPane />
 
       {tweaksOpen && <DevConfigPanel onClose={() => setTweaksOpen(false)} />}
     </div>

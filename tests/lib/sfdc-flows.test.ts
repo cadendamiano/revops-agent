@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FLOWS, matchFlow } from '@/lib/flows';
+import { FLOWS, matchFlow, isInlineArtifactKind } from '@/lib/flows';
 import { classifyStake } from '@/lib/policy/approvalPolicy';
 import { DEMO_PROMPTS } from '@/lib/data';
 
@@ -27,6 +27,16 @@ describe('FLOWS', () => {
     expect(Object.keys(FLOWS).sort()).toEqual([
       'at_risk_opps', 'hygiene_bulk_update', 'mass_stage_correction', 'pipeline_forecast',
     ]);
+  });
+
+  it('every scripted flow uses an inline artifact kind (renders in-thread)', () => {
+    for (const flow of Object.values(FLOWS)) {
+      if (!flow.artifact) continue;
+      expect(
+        isInlineArtifactKind(flow.artifact.kind),
+        `flow ${flow.id} expected inline kind, got ${flow.artifact.kind}`,
+      ).toBe(true);
+    }
   });
 
   it('approval-bearing flows have a stake matching classifyStake for their recordCount', () => {
