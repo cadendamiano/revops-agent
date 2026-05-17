@@ -16,9 +16,9 @@ const STAKE_LABEL: Record<Stake, string> = {
 
 const STAKE_COLOR: Record<Stake, string> = {
   'read-only': 'var(--pos)',
-  'single-record-edit': 'var(--teal)',
+  'single-record-edit': 'var(--accent)',
   'bulk-update': 'var(--warn)',
-  'mass-action': 'var(--neg)',
+  'mass-action': 'var(--danger)',
 };
 
 export function BulkUpdatePreview({ artifact }: Props) {

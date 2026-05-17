@@ -24,9 +24,9 @@ const STAKE_LABEL: Record<Stake, string> = {
 
 const STAKE_COLOR: Record<Stake, string> = {
   'read-only': 'var(--pos)',
-  'single-record-edit': 'var(--teal)',
+  'single-record-edit': 'var(--accent)',
   'bulk-update': 'var(--warn)',
-  'mass-action': 'var(--neg)',
+  'mass-action': 'var(--danger)',
 };
 
 function StakeBadge({ stake }: { stake: Stake }) {
@@ -110,10 +110,10 @@ function headLabel(
   batchId: string
 ) {
   if (state === 'approved') return <><span style={{ color: 'var(--pos)' }}>✓</span>Approved · {batchId}</>;
-  if (state === 'rejected') return <><span style={{ color: 'var(--neg)' }}>×</span>Cancelled · {batchId}</>;
+  if (state === 'rejected') return <><span style={{ color: 'var(--danger)' }}>×</span>Cancelled · {batchId}</>;
   if (state === 'submitting') return <><span className="pulse" />Submitting · {batchId}</>;
   if (stake === 'mass-action') {
-    return <><span className="pulse" style={{ background: 'var(--neg)' }} />Awaiting approval · mass action</>;
+    return <><span className="pulse" style={{ background: 'var(--danger)' }} />Awaiting approval · mass action</>;
   }
   if (stake === 'bulk-update') {
     return <><span className="pulse" style={{ background: 'var(--warn)' }} />Awaiting approval · bulk update</>;

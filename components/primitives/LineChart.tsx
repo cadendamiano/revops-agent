@@ -26,7 +26,7 @@ export function LineChart({
   data,
   threshold,
   height = 220,
-  accent = 'var(--teal)',
+  accent = 'var(--accent)',
   title,
   markers,
 }: Props) {

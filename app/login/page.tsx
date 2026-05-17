@@ -116,9 +116,9 @@ export default function LoginPage() {
           background: var(--surface); font-size: 13.5px;
           outline: none;
         }
-        .login-input:focus { box-shadow: var(--shadow-focus); border-color: var(--teal); }
+        .login-input:focus { box-shadow: var(--shadow-focus); border-color: var(--accent); }
         .login-error {
-          font-size: 12px; color: var(--neg);
+          font-size: 12px; color: var(--danger);
         }
         .login-submit {
           margin-top: 6px; height: 36px;
