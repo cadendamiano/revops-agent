@@ -5,11 +5,12 @@ import { USERS, ACCOUNTS, OPPORTUNITIES, LEADS } from '@/lib/salesforce/seed';
 export type DatasetKey = 'default';
 
 export const DEMO_PROMPTS: string[] = [
-  'Show me at-risk opportunities',
   "What's our Q2 forecast?",
-  'Update the stale opps missing NextStep',
-  'Close-Lost the silent Negotiation opps',
-  '/forecast',
+  'Show my pipeline as a kanban',
+  'Tell me about Pacific Health Systems',
+  'Qualify hot leads from the last 7 days',
+  'Which cases are breaching SLA?',
+  'Run a SOQL for the top open opps closing this quarter',
 ];
 
 export const LOGISTICS_DEMO_PROMPTS: string[] = [];
@@ -30,7 +31,7 @@ export const SEED_WORKSPACES: Workspace[] = [
     threads: [
       {
         id: 'thr_pipeops_seed',
-        title: 'Pipeline review',
+        title: 'Q2 pipeline check-in',
         createdAt: Date.parse('2026-05-01T00:00:00Z'),
         turns: [],
         artifacts: [],

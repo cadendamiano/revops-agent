@@ -2,6 +2,7 @@
 // No randomness, no clock reads — all dates are explicit strings.
 import type {
   Account, Lead, Opportunity, OpportunityStage, SfdcBundle, User,
+  Contact, Activity, Case, ApprovalRequest,
 } from './types';
 import { STAGE_PROBABILITY } from './types';
 
@@ -136,9 +137,100 @@ export const LEADS: Lead[] = [
 
 void AE_IDS;
 
+// ─── Contacts ────────────────────────────────────────────────────────
+export const CONTACTS: Contact[] = [
+  { Id: '003C0001', AccountId: '001A0001', Name: 'Marta Chen',     Title: 'VP Operations',     Email: 'mchen@northwind.example',     Phone: '+1-415-555-0101', OwnerId: '005AE001' },
+  { Id: '003C0002', AccountId: '001A0001', Name: 'Owen Briggs',    Title: 'Director of IT',    Email: 'obriggs@northwind.example',   Phone: '+1-415-555-0102', OwnerId: '005AE001' },
+  { Id: '003C0003', AccountId: '001A0002', Name: 'Dr. Linh Tran',  Title: 'CIO',               Email: 'ltran@pacifichealth.example', Phone: '+1-415-555-0103', OwnerId: '005AE002' },
+  { Id: '003C0004', AccountId: '001A0002', Name: 'Beatrice Howe',  Title: 'Director of EHR',   Email: 'bhowe@pacifichealth.example', Phone: '+1-415-555-0104', OwnerId: '005AE002' },
+  { Id: '003C0005', AccountId: '001A0003', Name: 'Theo Marsh',     Title: 'Head of Risk',      Email: 'tmarsh@crestline.example',    Phone: '+1-212-555-0201', OwnerId: '005AE003' },
+  { Id: '003C0006', AccountId: '001A0004', Name: 'Anika Roe',      Title: 'CTO',               Email: 'aroe@lumen.example',          Phone: '+1-415-555-0301', OwnerId: '005AE004' },
+  { Id: '003C0007', AccountId: '001A0005', Name: 'Damien Park',    Title: 'VP Retail Tech',    Email: 'dpark@cobalt.example',        Phone: '+1-415-555-0401', OwnerId: '005AE001' },
+  { Id: '003C0008', AccountId: '001A0005', Name: 'Yara Holloway',  Title: 'Director of Stores',Email: 'yholloway@cobalt.example',    Phone: '+1-415-555-0402', OwnerId: '005AE001' },
+  { Id: '003C0009', AccountId: '001A0006', Name: 'Felix Lund',     Title: 'IT Director',       Email: 'flund@veritas.example',       Phone: '+1-503-555-0501', OwnerId: '005AE002' },
+  { Id: '003C0010', AccountId: '001A0007', Name: 'Dr. Isobel Vance',Title: 'Head of Lab Ops',  Email: 'ivance@helios.example',       Phone: '+1-617-555-0601', OwnerId: '005AE003' },
+  { Id: '003C0011', AccountId: '001A0008', Name: 'Reggie Stone',   Title: 'Treasury Lead',     Email: 'rstone@quantumledger.example',Phone: '+1-212-555-0701', OwnerId: '005AE004' },
+  { Id: '003C0012', AccountId: '001A0009', Name: 'Lila Okafor',    Title: 'Procurement',       Email: 'lokafor@beacon.example',      Phone: '+1-415-555-0801', OwnerId: '005AE001' },
+  { Id: '003C0013', AccountId: '001A0010', Name: 'Marcus Eilers',  Title: 'CMO',               Email: 'meilers@summitoutdoor.example',Phone: '+1-303-555-0901', OwnerId: '005AE002' },
+  { Id: '003C0014', AccountId: '001A0011', Name: 'Sana Bukhari',   Title: 'Imaging Director',  Email: 'sbukhari@aurora.example',     Phone: '+1-415-555-1001', OwnerId: '005AE003' },
+  { Id: '003C0015', AccountId: '001A0012', Name: 'Pete Halvorsen', Title: 'Field Service VP',  Email: 'phalvorsen@granite.example',  Phone: '+1-414-555-1101', OwnerId: '005AE004' },
+  { Id: '003C0016', AccountId: '001A0013', Name: 'Elena Vargas',   Title: 'Chief Underwriter', Email: 'evargas@mosaic.example',      Phone: '+1-312-555-1201', OwnerId: '005AE001' },
+  { Id: '003C0017', AccountId: '001A0013', Name: 'Henry Joon',     Title: 'Claims Director',   Email: 'hjoon@mosaic.example',        Phone: '+1-312-555-1202', OwnerId: '005AE001' },
+  { Id: '003C0018', AccountId: '001A0014', Name: 'Kade Whitman',   Title: 'Head of Analytics', Email: 'kwhitman@polaris.example',    Phone: '+1-415-555-1301', OwnerId: '005AE002' },
+  { Id: '003C0019', AccountId: '001A0015', Name: 'Nora Petrescu',  Title: 'Fleet Director',    Email: 'npetrescu@ironwood.example',  Phone: '+1-216-555-1401', OwnerId: '005AE003' },
+  { Id: '003C0020', AccountId: '001A0002', Name: 'Owen Pereira',   Title: 'Telehealth Lead',   Email: 'opereira@pacifichealth.example',Phone: '+1-415-555-0105', OwnerId: '005AE002' },
+];
+
+// ─── Activities ──────────────────────────────────────────────────────
+// Recent activity on healthy opps; silence on the stale Negotiation pool.
+// Cross-references opps in OPPORTUNITIES.
+export const ACTIVITIES: Activity[] = [
+  // Healthy advancing opps — fresh activity in the last 7 days.
+  { Id: '00T0001', WhatId: '006H0001', WhoId: '003C0018', Type: 'Email',   Subject: 'Pricing approval request sent', ActivityDate: '2026-05-12', OwnerId: '005AE002' },
+  { Id: '00T0002', WhatId: '006H0001', WhoId: '003C0018', Type: 'Call',    Subject: 'Deal review with Kade', ActivityDate: '2026-05-10', DurationMin: 30, OwnerId: '005AE002' },
+  { Id: '00T0003', WhatId: '006H0002', WhoId: '003C0019', Type: 'Meeting', Subject: 'Procurement intro', ActivityDate: '2026-05-09', DurationMin: 45, OwnerId: '005AE003' },
+  { Id: '00T0004', WhatId: '006H0003', WhoId: '003C0006', Type: 'Meeting', Subject: 'Tech deep-dive', ActivityDate: '2026-05-13', DurationMin: 60, OwnerId: '005AE004' },
+  { Id: '00T0005', WhatId: '006H0004', WhoId: '003C0001', Type: 'Call',    Subject: 'IT review with CTO', ActivityDate: '2026-05-11', DurationMin: 30, OwnerId: '005AE001' },
+  { Id: '00T0006', WhatId: '006H0004', WhoId: '003C0002', Type: 'Email',   Subject: 'Follow-up notes', ActivityDate: '2026-05-12', OwnerId: '005AE001' },
+  { Id: '00T0007', WhatId: '006H0005', WhoId: '003C0011', Type: 'Call',    Subject: 'Discovery call', ActivityDate: '2026-05-08', DurationMin: 25, OwnerId: '005AE004' },
+  { Id: '00T0008', WhatId: '006H0006', WhoId: '003C0010', Type: 'Email',   Subject: 'Demo request', ActivityDate: '2026-05-14', OwnerId: '005AE003' },
+  // Closed Won — handoff activity.
+  { Id: '00T0009', WhatId: '006W0001', WhoId: '003C0012', Type: 'Meeting', Subject: 'Kickoff scheduled', ActivityDate: '2026-04-28', DurationMin: 30, OwnerId: '005AE001' },
+  { Id: '00T0010', WhatId: '006W0002', WhoId: '003C0003', Type: 'Meeting', Subject: 'Implementation kickoff', ActivityDate: '2026-04-20', DurationMin: 60, OwnerId: '005AE002' },
+  { Id: '00T0011', WhatId: '006W0002', WhoId: '003C0020', Type: 'Email',   Subject: 'Phase 1 plan', ActivityDate: '2026-04-22', OwnerId: '005AE002' },
+  { Id: '00T0012', WhatId: '006W0003', WhoId: '003C0005', Type: 'Call',    Subject: 'CS handoff', ActivityDate: '2026-04-30', DurationMin: 20, OwnerId: '005AE003' },
+  // Stale Negotiation pool — only the older "stage change" log entries (silence since).
+  { Id: '00T0020', WhatId: '006N0013', WhoId: '003C0016', Type: 'StageChange', Subject: 'Moved to Negotiation', ActivityDate: '2026-02-04', OwnerId: '005AE001' },
+  { Id: '00T0021', WhatId: '006N0013', WhoId: '003C0016', Type: 'Email',       Subject: 'Pricing question', ActivityDate: '2026-02-04', OwnerId: '005AE001' },
+  { Id: '00T0022', WhatId: '006N0002', WhoId: '003C0003', Type: 'Meeting',     Subject: 'EHR scoping', ActivityDate: '2026-02-02', DurationMin: 45, OwnerId: '005AE002' },
+  { Id: '00T0023', WhatId: '006N0001', WhoId: '003C0001', Type: 'Email',       Subject: 'Renewal terms draft', ActivityDate: '2026-02-14', OwnerId: '005AE001' },
+  // Account 360 — Pacific Health: multiple touches across both open opps + cases.
+  { Id: '00T0030', WhatId: '001A0002', WhoId: '003C0003', Type: 'Call',    Subject: 'Quarterly account review', ActivityDate: '2026-05-05', DurationMin: 45, OwnerId: '005AE002' },
+  { Id: '00T0031', WhatId: '001A0002', WhoId: '003C0004', Type: 'Email',   Subject: 'EHR roadmap update', ActivityDate: '2026-05-07', OwnerId: '005AE002' },
+  { Id: '00T0032', WhatId: '001A0002', WhoId: '003C0020', Type: 'Meeting', Subject: 'Telehealth pilot review', ActivityDate: '2026-04-29', DurationMin: 60, OwnerId: '005AE002' },
+  { Id: '00T0033', WhatId: '001A0002', WhoId: '003C0003', Type: 'Note',    Subject: 'CFO escalation logged', ActivityDate: '2026-02-19', OwnerId: '005AE002' },
+  // Case-related (support touches).
+  { Id: '00T0040', WhatId: '500C0001', Type: 'Email', Subject: 'Acknowledged SLA breach', ActivityDate: '2026-05-14', OwnerId: '005AE002' },
+  { Id: '00T0041', WhatId: '500C0002', Type: 'Call',  Subject: 'P1 triage', ActivityDate: '2026-05-15', DurationMin: 15, OwnerId: '005MG001' },
+  // A few more for breadth.
+  { Id: '00T0050', WhatId: '006N0005', WhoId: '003C0007', Type: 'Email',   Subject: 'Quote review', ActivityDate: '2026-02-11', OwnerId: '005AE001' },
+  { Id: '00T0051', WhatId: '006N0010', WhoId: '003C0013', Type: 'Meeting', Subject: 'Loyalty roadmap', ActivityDate: '2026-02-22', DurationMin: 45, OwnerId: '005AE002' },
+  { Id: '00T0052', WhatId: '006P0001', Type: 'Call', Subject: 'Initial outreach', ActivityDate: '2026-05-13', DurationMin: 15, OwnerId: '005AE004' },
+  { Id: '00T0053', WhatId: '006P0002', WhoId: '003C0016', Type: 'Meeting', Subject: 'Intro meeting', ActivityDate: '2026-05-15', DurationMin: 30, OwnerId: '005AE001' },
+];
+
+// ─── Cases ──────────────────────────────────────────────────────────
+// 12 cases. Include 2 P1 SLA breaches (created early, target already past).
+export const CASES: Case[] = [
+  { Id: '500C0001', CaseNumber: 'C-1001', AccountId: '001A0002', Subject: 'EHR sync failing on overnight job',          Priority: 'P1', Status: 'Escalated', CreatedDate: '2026-05-10', SlaTargetDate: '2026-05-14', OwnerId: '005AE002' },
+  { Id: '500C0002', CaseNumber: 'C-1002', AccountId: '001A0013', Subject: 'Claims API 502s under load',                 Priority: 'P1', Status: 'Working',   CreatedDate: '2026-05-12', SlaTargetDate: '2026-05-15', OwnerId: '005MG001' },
+  { Id: '500C0003', CaseNumber: 'C-1003', AccountId: '001A0001', Subject: 'Field tablet sync drift',                    Priority: 'P2', Status: 'Working',   CreatedDate: '2026-05-09', SlaTargetDate: '2026-05-18', OwnerId: '005AE001' },
+  { Id: '500C0004', CaseNumber: 'C-1004', AccountId: '001A0005', Subject: 'POS pricing discrepancy on bundle SKU',      Priority: 'P2', Status: 'Working',   CreatedDate: '2026-05-08', SlaTargetDate: '2026-05-17', OwnerId: '005AE001' },
+  { Id: '500C0005', CaseNumber: 'C-1005', AccountId: '001A0008', Subject: 'Audit export missing columns',               Priority: 'P3', Status: 'New',       CreatedDate: '2026-05-13', SlaTargetDate: '2026-05-25', OwnerId: '005AE004' },
+  { Id: '500C0006', CaseNumber: 'C-1006', AccountId: '001A0011', Subject: 'Workflow engine latency spike',              Priority: 'P2', Status: 'Working',   CreatedDate: '2026-05-11', SlaTargetDate: '2026-05-19', OwnerId: '005AE003' },
+  { Id: '500C0007', CaseNumber: 'C-1007', AccountId: '001A0004', Subject: 'SAML SSO redirect loop',                     Priority: 'P3', Status: 'New',       CreatedDate: '2026-05-14', SlaTargetDate: '2026-05-22', OwnerId: '005AE004' },
+  { Id: '500C0008', CaseNumber: 'C-1008', AccountId: '001A0012', Subject: 'IoT sensor heartbeat drops',                 Priority: 'P2', Status: 'New',       CreatedDate: '2026-05-13', SlaTargetDate: '2026-05-20', OwnerId: '005AE004' },
+  { Id: '500C0009', CaseNumber: 'C-1009', AccountId: '001A0007', Subject: 'Compliance suite report PDF blank',          Priority: 'P3', Status: 'Working',   CreatedDate: '2026-05-09', SlaTargetDate: '2026-05-23', OwnerId: '005AE003' },
+  { Id: '500C0010', CaseNumber: 'C-1010', AccountId: '001A0010', Subject: 'Kiosk pairing failures in-store',            Priority: 'P2', Status: 'Working',   CreatedDate: '2026-05-12', SlaTargetDate: '2026-05-19', OwnerId: '005AE002' },
+  { Id: '500C0011', CaseNumber: 'C-1011', AccountId: '001A0014', Subject: 'Dashboard chart export error',               Priority: 'P3', Status: 'Closed',    CreatedDate: '2026-04-28', SlaTargetDate: '2026-05-08', OwnerId: '005AE002' },
+  { Id: '500C0012', CaseNumber: 'C-1012', AccountId: '001A0015', Subject: 'Route planner timeout on multi-stop',        Priority: 'P3', Status: 'New',       CreatedDate: '2026-05-14', SlaTargetDate: '2026-05-22', OwnerId: '005AE003' },
+];
+
+// ─── Approval Requests (discount on Opportunities) ──────────────────
+export const APPROVAL_REQUESTS: ApprovalRequest[] = [
+  { Id: '801A0001', SubmittedFor: '006N0013', SubmittedById: '005AE001', Reason: '15% discount to secure Mosaic underwriting deal', DiscountPct: 15, Amount: 295_000, Status: 'Pending', CreatedDate: '2026-05-12' },
+  { Id: '801A0002', SubmittedFor: '006N0002', SubmittedById: '005AE002', Reason: '12% discount – Pacific Health EHR expansion',     DiscountPct: 12, Amount: 320_000, Status: 'Pending', CreatedDate: '2026-05-13' },
+  { Id: '801A0003', SubmittedFor: '006N0012', SubmittedById: '005AE004', Reason: '10% discount – Granite field service',            DiscountPct: 10, Amount: 365_000, Status: 'Pending', CreatedDate: '2026-05-14' },
+  { Id: '801A0004', SubmittedFor: '006H0002', SubmittedById: '005AE003', Reason: '8% discount – Ironwood route optimizer',          DiscountPct:  8, Amount: 118_000, Status: 'Pending', CreatedDate: '2026-05-15' },
+];
+
 export const SFDC_BUNDLE: SfdcBundle = {
   users: USERS,
   accounts: ACCOUNTS,
   opportunities: OPPORTUNITIES,
   leads: LEADS,
+  contacts: CONTACTS,
+  activities: ACTIVITIES,
+  cases: CASES,
+  approvalRequests: APPROVAL_REQUESTS,
 };

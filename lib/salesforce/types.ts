@@ -59,11 +59,116 @@ export type Lead = {
   OwnerId?: Id;
 };
 
+// ─── Contact ────────────────────────────────────────────────────────
+export type Contact = {
+  Id: Id;
+  AccountId: Id;
+  Name: string;
+  Title?: string;
+  Email: string;
+  Phone?: string;
+  OwnerId?: Id;
+};
+
+// ─── Activity (tasks/events/comms) ──────────────────────────────────
+export type ActivityType = 'Call' | 'Email' | 'Meeting' | 'Note' | 'StageChange';
+export type Activity = {
+  Id: Id;
+  WhatId: Id;     // Opportunity, Account, Case Id
+  WhoId?: Id;     // Contact or Lead Id
+  Type: ActivityType;
+  Subject: string;
+  ActivityDate: IsoDate;
+  DurationMin?: number;
+  OwnerId: Id;
+};
+
+// ─── Case ───────────────────────────────────────────────────────────
+export type CasePriority = 'P1' | 'P2' | 'P3';
+export type CaseStatus = 'New' | 'Working' | 'Escalated' | 'Closed';
+export type Case = {
+  Id: Id;
+  CaseNumber: string;
+  AccountId: Id;
+  Subject: string;
+  Priority: CasePriority;
+  Status: CaseStatus;
+  CreatedDate: IsoDate;
+  SlaTargetDate: IsoDate;
+  OwnerId: Id;
+};
+
+// ─── Report / Dashboard (analytics) ─────────────────────────────────
+export type ReportFormat = 'Tabular' | 'Summary' | 'Matrix';
+export type ReportRow = Record<string, string | number>;
+export type Report = {
+  Id: Id;
+  Name: string;
+  Folder: string;
+  Format: ReportFormat;
+  columns: string[];
+  rows: ReportRow[] | (() => ReportRow[]);
+  grandTotal?: number;
+};
+
+export type DashboardTileType = 'metric' | 'bar' | 'donut' | 'line';
+export type DashboardTile = {
+  type: DashboardTileType;
+  label: string;
+  value?: string | number;
+  series?: { label: string; value: number }[];
+  reportId?: Id;
+};
+export type Dashboard = {
+  Id: Id;
+  Name: string;
+  tiles: DashboardTile[];
+};
+
+// ─── Approval Request ──────────────────────────────────────────────
+export type ApprovalRequestStatus = 'Pending' | 'Approved' | 'Rejected';
+export type ApprovalRequest = {
+  Id: Id;
+  SubmittedFor: Id;        // Opportunity Id
+  SubmittedById: Id;       // User Id
+  Reason: string;
+  DiscountPct: number;
+  Amount: number;
+  Status: ApprovalRequestStatus;
+  CreatedDate: IsoDate;
+};
+
+// ─── sObject describe (schema) ─────────────────────────────────────
+export type FieldType = 'id' | 'string' | 'picklist' | 'reference' | 'number' | 'currency' | 'date' | 'datetime' | 'boolean' | 'email' | 'phone' | 'textarea';
+export type FieldDescribe = {
+  name: string;
+  label: string;
+  type: FieldType;
+  nillable: boolean;
+  referenceTo?: string;
+  picklistValues?: string[];
+};
+export type ChildRelationship = {
+  childSObject: string;
+  field: string;
+  relationshipName: string;
+};
+export type SObjectDescribe = {
+  name: string;
+  label: string;
+  fields: FieldDescribe[];
+  childRelationships: ChildRelationship[];
+};
+
 export type SfdcBundle = {
   users: User[];
   accounts: Account[];
   opportunities: Opportunity[];
   leads: Lead[];
+  contacts: Contact[];
+  activities: Activity[];
+  cases: Case[];
+  approvalRequests: ApprovalRequest[];
 };
 
 // Utility: days between two ISO dates (a - b), positive when a is after b.

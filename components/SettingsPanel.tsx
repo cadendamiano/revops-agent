@@ -87,6 +87,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const mode = useStore(s => s.mode);
   const setMode = useStore(s => s.setMode);
   const showCodeView = useStore(s => s.tweaks.showCodeView);
+  const darkMode = useStore(s => s.tweaks.darkMode);
   const setTweak = useStore(s => s.setTweak);
   const setSettingsStatus = useStore(s => s.setSettingsStatus);
 
@@ -229,6 +230,23 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <div className="tweaks-body settings-body">
+        <section className="settings-section">
+          <div className="settings-section-head">
+            <span>Dark mode</span>
+            <span className={'status-pill' + (darkMode ? ' ok' : '')}>
+              {darkMode ? 'on' : 'off'}
+            </span>
+          </div>
+          <label className="tweak-toggle" style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={e => setTweak('darkMode', e.target.checked)}
+            />
+            Enable dark color scheme
+          </label>
+        </section>
+
         <section className="settings-section">
           <div className="settings-section-head">
             <span>Code view</span>

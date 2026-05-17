@@ -22,6 +22,7 @@ export default function Page() {
   const setActiveArtifact = useStore(s => s.setActiveArtifact);
   const setComposer = useStore(s => s.setComposer);
   const accentHue = useStore(s => s.tweaks.accentHue);
+  const darkMode = useStore(s => s.tweaks.darkMode);
   const newWorkspaceThread = useStore(s => s.newWorkspaceThread);
   const streaming = useStore(s => s.streaming);
 
@@ -61,6 +62,10 @@ export default function Page() {
   useEffect(() => {
     document.documentElement.style.setProperty('--hue', String(accentHue));
   }, [accentHue]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

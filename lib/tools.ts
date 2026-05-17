@@ -1,24 +1,36 @@
-// Legacy dispatcher. Wraps the v2 SFDC tool registry behind a uniform runTool().
+// Map-based dispatcher over the v2 SFDC tool registry.
 import type { DatasetKey } from './data';
-import type { DefinedTool } from './tools/defineTool';
 import {
   DEFINED_MODEL_TOOLS, DEFINED_INTERNAL_TOOLS,
   READ_TOOLS_V2 as _READ, FORM_TOOLS_V2 as _FORM, WRITE_TOOLS_V2 as _WRITE,
   getDefinedTool, validateToolInput,
 } from './tools/index';
 import {
-  handleFindAtRiskOpps, handleFindStaleOpps, handleFindOppsMissingField,
-  handleGetPipelineForecast, handleListOpps, handleGetOpp,
-  handleListUsers, handleListAccounts, handleListLeads, handleGetAccount,
-} from './tools/sfdc-read';
-import {
-  handleProposeOppFieldUpdate, handleProposeStageChange,
+  handleSfDataQuery, handleSfDataSearch, handleSfDataGetRecord,
+  handleSfDataCreate, handleSfDataUpdate, handleSfDataStageChange, handleSfDataDelete,
   handleSubmitApprovedSfdcBatch,
-} from './tools/sfdc-write';
+} from './tools/sfdc/data';
 import {
-  handleRenderOppHealthScorecard, handleRenderPipelineForecast,
-  handleRenderBulkUpdatePreview,
-} from './tools/sfdc-render';
+  handleSfSObjectDescribe, handleSfSObjectList,
+} from './tools/sfdc/sobject';
+import {
+  handleSfAnalyticsListDashboards, handleSfAnalyticsGetDashboard,
+  handleSfAnalyticsListReports, handleSfAnalyticsRunReport,
+} from './tools/sfdc/analytics';
+import {
+  handleSfCaseList, handleSfCaseSlaBreach,
+} from './tools/sfdc/case';
+import {
+  handleSfActivityList, handleSfActivityLog,
+} from './tools/sfdc/activity';
+import {
+  handleSfApprovalQueue, handleSfApprovalDecide,
+} from './tools/sfdc/approval';
+import {
+  handleRenderSoqlResults, handleRenderPipelineKanban, handleRenderAccount360,
+  handleRenderLeadScoring, handleRenderForecast, handleRenderDashboardTiles,
+  handleRenderCaseSla, handleRenderActivityTimeline, handleRenderBulkUpdatePreview,
+} from './tools/sfdc/render';
 
 export type ToolDef = {
   name: string;
@@ -59,81 +71,134 @@ function fail(summary: string, data: unknown = null): RunResult {
   return { ok: false, summary, data };
 }
 
+type Handler = (input: any) => Promise<RunResult>;
+
+const HANDLERS = new Map<string, Handler>();
+
+// sf_data
+HANDLERS.set('sf_data_query', async (input) => {
+  const r = await handleSfDataQuery(input);
+  if ('error' in r) return fail(r.hint || r.error, r);
+  return ok(`${r.totalSize} record${r.totalSize === 1 ? '' : 's'}`, r);
+});
+HANDLERS.set('sf_data_search', async (input) => {
+  const r = await handleSfDataSearch(input);
+  return ok(`${r.total} match${r.total === 1 ? '' : 'es'} for "${r.term}"`, r);
+});
+HANDLERS.set('sf_data_get_record', async (input) => {
+  const r = await handleSfDataGetRecord(input);
+  return r ? ok((r as any).Name ?? (r as any).Subject ?? input.id, r) : fail(`${input.sobject} ${input.id} not found`);
+});
+HANDLERS.set('sf_data_create', async (input) => {
+  const r = await handleSfDataCreate(input);
+  return ok(r.summary, r);
+});
+HANDLERS.set('sf_data_update', async (input) => {
+  const r = await handleSfDataUpdate(input);
+  return ok(r.summary, r);
+});
+HANDLERS.set('sf_data_stage_change', async (input) => {
+  const r = await handleSfDataStageChange(input);
+  return ok(r.summary, r);
+});
+HANDLERS.set('sf_data_delete', async (input) => {
+  const r = await handleSfDataDelete(input);
+  return ok(r.summary, r);
+});
+HANDLERS.set('submit_approved_sfdc_batch', async (input) => {
+  const r = await handleSubmitApprovedSfdcBatch(input);
+  return r.ok ? ok(`Applied ${r.applied} changes`, r) : fail(r.reason, r);
+});
+
+// sf_sobject
+HANDLERS.set('sf_sobject_describe', async (input) => {
+  const r = await handleSfSObjectDescribe(input);
+  if ('error' in (r as any)) return fail((r as any).hint, r);
+  return ok(`${input.sobject}: ${(r as any).fields.length} fields`, r);
+});
+HANDLERS.set('sf_sobject_list', async () => {
+  const r = await handleSfSObjectList();
+  return ok(`${r.length} sObjects`, r);
+});
+
+// sf_analytics
+HANDLERS.set('sf_analytics_list_dashboards', async () => {
+  const r = await handleSfAnalyticsListDashboards();
+  return ok(`${r.length} dashboards`, r);
+});
+HANDLERS.set('sf_analytics_get_dashboard', async (input) => {
+  const r = await handleSfAnalyticsGetDashboard(input);
+  if ('error' in (r as any)) return fail((r as any).hint, r);
+  return ok((r as any).Name, r);
+});
+HANDLERS.set('sf_analytics_list_reports', async () => {
+  const r = await handleSfAnalyticsListReports();
+  return ok(`${r.length} reports`, r);
+});
+HANDLERS.set('sf_analytics_run_report', async (input) => {
+  const r = await handleSfAnalyticsRunReport(input);
+  if ('error' in (r as any)) return fail((r as any).hint, r);
+  return ok((r as any).Name, r);
+});
+
+// sf_case
+HANDLERS.set('sf_case_list', async (input) => {
+  const r = await handleSfCaseList(input);
+  return ok(`${r.length} case${r.length === 1 ? '' : 's'}`, r);
+});
+HANDLERS.set('sf_case_sla_breach', async () => {
+  const r = await handleSfCaseSlaBreach();
+  return ok(`${r.length} case${r.length === 1 ? '' : 's'} at/over SLA`, r);
+});
+
+// sf_activity
+HANDLERS.set('sf_activity_list', async (input) => {
+  const r = await handleSfActivityList(input);
+  return ok(`${r.length} activit${r.length === 1 ? 'y' : 'ies'}`, r);
+});
+HANDLERS.set('sf_activity_log', async (input) => {
+  const r = await handleSfActivityLog(input);
+  return ok(r.summary, r);
+});
+
+// sf_approval
+HANDLERS.set('sf_approval_queue', async () => {
+  const r = await handleSfApprovalQueue();
+  return ok(`${r.length} pending approval${r.length === 1 ? '' : 's'}`, r);
+});
+HANDLERS.set('sf_approval_decide', async (input) => {
+  const r = await handleSfApprovalDecide(input);
+  return ok(r.summary, r);
+});
+
+// SFDC render tools
+HANDLERS.set('render_soql_results',      async (input) => ok('SOQL results rendered',     await handleRenderSoqlResults(input)));
+HANDLERS.set('render_pipeline_kanban',   async (input) => ok('Pipeline kanban rendered',  await handleRenderPipelineKanban(input)));
+HANDLERS.set('render_account_360',       async (input) => ok('Account 360 rendered',     await handleRenderAccount360(input)));
+HANDLERS.set('render_lead_scoring',      async (input) => ok('Lead scoring rendered',    await handleRenderLeadScoring(input)));
+HANDLERS.set('render_forecast',          async (input) => ok('Forecast rendered',        await handleRenderForecast(input)));
+HANDLERS.set('render_dashboard_tiles',   async (input) => ok('Dashboard rendered',       await handleRenderDashboardTiles(input)));
+HANDLERS.set('render_case_sla',          async (input) => ok('Case SLA rendered',        await handleRenderCaseSla(input)));
+HANDLERS.set('render_activity_timeline', async (input) => ok('Timeline rendered',         await handleRenderActivityTimeline(input)));
+HANDLERS.set('render_bulk_update_preview', async (input) => ok('Preview rendered',       await handleRenderBulkUpdatePreview(input)));
+
+// Generic render tools (handled by the runtime as artifact events; we just echo).
+const echoRender = (kind: string): Handler => async (input) => ok(`${kind} rendered`, { kind, ...input });
+HANDLERS.set('render_artifact',             echoRender('artifact'));
+HANDLERS.set('render_html_artifact',        echoRender('custom-dashboard'));
+HANDLERS.set('render_spreadsheet_artifact', echoRender('spreadsheet'));
+HANDLERS.set('render_document_artifact',    echoRender('document'));
+HANDLERS.set('render_slides_artifact',      echoRender('slides'));
+HANDLERS.set('render_automation_artifact',  echoRender('automation'));
+
+// Chat-loop affordances
+HANDLERS.set('ask_question',    async (input) => ok('acknowledged', { name: 'ask_question', ...input }));
+HANDLERS.set('offer_artifacts', async (input) => ok('acknowledged', { name: 'offer_artifacts', ...input }));
+
 async function dispatch(name: string, input: any): Promise<RunResult> {
-  switch (name) {
-    case 'find_at_risk_opps': {
-      const rows = await handleFindAtRiskOpps(input);
-      return ok(`${rows.length} at-risk opportunities`, rows);
-    }
-    case 'find_stale_opps': {
-      const rows = await handleFindStaleOpps(input);
-      return ok(`${rows.length} stale opportunities`, rows);
-    }
-    case 'find_opps_missing_field': {
-      const rows = await handleFindOppsMissingField(input);
-      return ok(`${rows.length} opps missing ${input.field}`, rows);
-    }
-    case 'get_pipeline_forecast': {
-      const f = await handleGetPipelineForecast(input);
-      return ok(`${input.quarter} weighted $${Math.round(f.totalWeighted).toLocaleString()}`, f);
-    }
-    case 'list_opps': {
-      const rows = await handleListOpps(input);
-      return ok(`${rows.length} opportunities`, rows);
-    }
-    case 'get_opp': {
-      const o = await handleGetOpp(input);
-      return o ? ok(o.Name, o) : fail('opportunity not found');
-    }
-    case 'list_users': {
-      const rows = await handleListUsers();
-      return ok(`${rows.length} users`, rows);
-    }
-    case 'list_accounts': {
-      const rows = await handleListAccounts();
-      return ok(`${rows.length} accounts`, rows);
-    }
-    case 'list_leads': {
-      const rows = await handleListLeads();
-      return ok(`${rows.length} leads`, rows);
-    }
-    case 'get_account': {
-      const a = await handleGetAccount(input);
-      return a ? ok(a.Name, a) : fail('account not found');
-    }
-    case 'propose_opp_field_update': {
-      const r = await handleProposeOppFieldUpdate(input);
-      return ok(r.summary, r);
-    }
-    case 'propose_stage_change': {
-      const r = await handleProposeStageChange(input);
-      return ok(r.summary, r);
-    }
-    case 'submit_approved_sfdc_batch': {
-      const r = await handleSubmitApprovedSfdcBatch(input);
-      return r.ok
-        ? ok(`Applied ${r.applied} changes`, r)
-        : fail(r.reason, r);
-    }
-    case 'render_opp_health_scorecard': {
-      const r = await handleRenderOppHealthScorecard(input);
-      return ok('Scorecard rendered', r);
-    }
-    case 'render_pipeline_forecast': {
-      const r = await handleRenderPipelineForecast(input);
-      return ok('Forecast rendered', r);
-    }
-    case 'render_bulk_update_preview': {
-      const r = await handleRenderBulkUpdatePreview(input);
-      return ok('Preview rendered', r);
-    }
-    case 'ask_question':
-    case 'offer_artifacts':
-      // Handled by the agent loop, not here. Acknowledge so it doesn't fall through.
-      return ok('acknowledged', { name });
-    default:
-      return { ok: false, summary: `unknown tool: ${name}`, data: { name } };
-  }
+  const h = HANDLERS.get(name);
+  if (!h) return { ok: false, summary: `unknown tool: ${name}`, data: { name } };
+  return h(input);
 }
 
 export async function runTool(
@@ -154,27 +219,38 @@ export async function runTool(
 export const runMockTool = runTool;
 export const runRealTool = runTool;
 
-export const SYSTEM_PROMPT = `You are Salesforce Coworker, an AI assistant for revenue operations at Atlas Tech. Today's date is 2026-05-16.
+export const SYSTEM_PROMPT = `You are Salesforce Coworker, a CRM-savvy AI assistant for revenue operations at Atlas Tech. Today's date is 2026-05-16. You drive a mocked Salesforce org via tool calls that mirror the real \`sf\` CLI / REST API.
 
-Your job: read CRM data and propose changes; you never write to Salesforce without explicit human approval.
+Tool groups (each group's tools share a common prefix):
 
-Available tools (call by name):
-- Read: find_at_risk_opps, find_stale_opps, find_opps_missing_field, get_pipeline_forecast, list_opps, get_opp, list_users, list_accounts, list_leads, get_account.
-- Propose (stages a change batch — requires approval to apply): propose_opp_field_update, propose_stage_change.
-- Render (emits an artifact card the user reviews): render_opp_health_scorecard, render_pipeline_forecast, render_bulk_update_preview.
+- **sf_data** — record CRUD + SOQL. Prefer \`sf_data_query\` (SOQL) for any read. Use \`sf_data_get_record\` for single-record fetches, \`sf_data_search\` for keyword lookups across sObjects. Writes (\`sf_data_create\`, \`sf_data_update\`, \`sf_data_stage_change\`, \`sf_data_delete\`) STAGE a batch; they do not apply. The response includes \`batchId\` and \`stake\`.
+- **sf_sobject** — schema introspection. \`sf_sobject_list\` shows sObjects + row counts; \`sf_sobject_describe\` returns fields + relationships. Use when the user asks "what fields…" or you need to validate a field name before SOQL.
+- **sf_analytics** — reports and dashboards. \`sf_analytics_list_reports\` / \`sf_analytics_run_report\` (reportId="ForecastQ2" for the weighted Q2 forecast), and \`sf_analytics_list_dashboards\` / \`sf_analytics_get_dashboard\`.
+- **sf_case** — \`sf_case_list\` (filter by status/priority/account) and \`sf_case_sla_breach\` (cases past or near SLA).
+- **sf_activity** — \`sf_activity_list\` (timeline for an Opp/Account/Case) and \`sf_activity_log\` (stage a new Call/Email/Meeting/Note).
+- **sf_approval** — \`sf_approval_queue\` (pending discount approvals) and \`sf_approval_decide\` (stage approve/reject).
+- **Render** — open an artifact card for the user: \`render_soql_results\`, \`render_pipeline_kanban\`, \`render_account_360\`, \`render_lead_scoring\`, \`render_forecast\`, \`render_dashboard_tiles\`, \`render_case_sla\`, \`render_activity_timeline\`, \`render_bulk_update_preview\`. Generic artifacts (\`render_spreadsheet_artifact\`, \`render_document_artifact\`, \`render_slides_artifact\`, \`render_html_artifact\`) are available for ad-hoc visualizations.
+- **Chat affordances** — \`ask_question\` for clarification, \`offer_artifacts\` for suggesting renders.
 
-Workflow:
-1. Use read tools to understand the situation. Show the user counts and a clear breakdown.
-2. Propose changes by calling propose_*. Surface the returned stake ("bulk-update", "mass-action") and recordCount in your message.
-3. Render a preview artifact via render_bulk_update_preview so the human can review before approving.
-4. Wait for approval. submit_approved_sfdc_batch is internal — it runs automatically once the human clicks Approve and the server mints a token.
+Workflow (SOQL-first read, then propose→render→approve for writes):
+1. **Read first.** Open with \`sf_data_query\` or a named convenience read (\`sf_case_sla_breach\`, \`sf_analytics_run_report\`, etc.). Summarize what you found in 1–3 sentences citing counts, names, and amounts.
+2. **Render** the appropriate artifact for the result so the user can see it.
+3. **Propose** changes by calling a stage tool (\`sf_data_update\`, \`sf_data_stage_change\`, \`sf_data_delete\`, \`sf_activity_log\`, \`sf_approval_decide\`). Each returns \`batchId\`, \`stake\`, \`recordCount\`.
+4. Call \`render_bulk_update_preview\` with the \`batchId\` so the user can review.
+5. Wait for the human to click Approve. \`submit_approved_sfdc_batch\` is internal — the harness invokes it once a token is minted.
 
-Approval stakes:
-- read-only: no changes proposed — auto.
-- single-record-edit / bulk-update: single approver.
-- mass-action (>25 records, irreversible, or externally visible): dual control required.
+Approval stakes (set by the policy classifier — do not invent):
+- \`read-only\` — no changes proposed.
+- \`single-record-edit\` — 1 record, reversible.
+- \`bulk-update\` — 2–25 records, reversible, single approver.
+- \`mass-action\` — >25 records, irreversible (Closed Won/Lost, deletes), or externally visible (Closed Lost). Requires dual control. Examples that ALWAYS trip mass-action: \`sf_data_delete\` (always), \`sf_data_stage_change\` to Closed Lost (externally visible), batches over 25 rows.
 
-Be concise. Cite specific opp names and amounts. Never invent IDs.`;
+SOQL guidance:
+- Supported: \`SELECT … FROM Opportunity|Account|Lead|Contact|User|Case|Activity [WHERE …] [ORDER BY …] [LIMIT n]\`.
+- WHERE supports AND/OR, =, !=, <, <=, >, >=, LIKE, IN, NOT IN, plus date literals (TODAY, YESTERDAY, LAST_N_DAYS:N, THIS_QUARTER, NEXT_QUARTER, LAST_QUARTER).
+- If the parser returns \`UNSUPPORTED_SOQL\`, simplify the query or use a named convenience tool instead.
+
+Be concise. Cite specific record names, Ids, and amounts. Never invent Ids.`;
 
 export const TESTING_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 

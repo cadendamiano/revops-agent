@@ -6,11 +6,12 @@ import { DEMO_PROMPTS } from '@/lib/data';
 describe('matchFlow', () => {
   it('resolves the demo prompts to the right flow id', () => {
     const expected: Record<string, string | null> = {
-      'Show me at-risk opportunities': 'at_risk_opps',
-      "What's our Q2 forecast?": 'pipeline_forecast',
-      'Update the stale opps missing NextStep': 'hygiene_bulk_update',
-      'Close-Lost the silent Negotiation opps': 'mass_stage_correction',
-      '/forecast': 'pipeline_forecast',
+      "What's our Q2 forecast?": 'forecast_review',
+      'Show my pipeline as a kanban': 'pipeline_kanban',
+      'Tell me about Pacific Health Systems': 'account_360',
+      'Qualify hot leads from the last 7 days': 'lead_qualification',
+      'Which cases are breaching SLA?': 'case_sla_review',
+      'Run a SOQL for the top open opps closing this quarter': 'soql_explore',
     };
     for (const prompt of DEMO_PROMPTS) {
       expect(matchFlow(prompt)).toBe(expected[prompt]);
@@ -23,9 +24,10 @@ describe('matchFlow', () => {
 });
 
 describe('FLOWS', () => {
-  it('has all 4 expected entries', () => {
+  it('has the 6 expected entries', () => {
     expect(Object.keys(FLOWS).sort()).toEqual([
-      'at_risk_opps', 'hygiene_bulk_update', 'mass_stage_correction', 'pipeline_forecast',
+      'account_360', 'case_sla_review', 'forecast_review',
+      'lead_qualification', 'pipeline_kanban', 'soql_explore',
     ]);
   });
 
@@ -34,11 +36,8 @@ describe('FLOWS', () => {
       for (const step of flow.steps) {
         if (step.kind !== 'approval') continue;
         const { recordCount, stake } = step.payload;
-        // The hygiene flow is reversible / not externally visible.
-        // The mass flow is externally visible (Closed Lost) and irreversible.
-        const reversible = flow.id !== 'mass_stage_correction';
-        const externallyVisible = flow.id === 'mass_stage_correction';
-        const expected = classifyStake({ recordCount, reversible, externallyVisible });
+        // Current approval flow (lead_qualification) is reversible + not externally visible.
+        const expected = classifyStake({ recordCount, reversible: true, externallyVisible: false });
         expect(stake).toBe(expected);
       }
     }

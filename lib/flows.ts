@@ -6,12 +6,19 @@ export type ArtifactKind =
   | 'document'
   | 'slides'
   | 'custom-dashboard'
-  | 'opp-health'
-  | 'pipeline-forecast'
+  // SFDC-specific artifact kinds
+  | 'soql-results'
+  | 'pipeline-kanban'
+  | 'account-360'
+  | 'lead-scoring'
+  | 'forecast'
+  | 'dashboard-tiles'
+  | 'case-sla'
+  | 'activity-timeline'
   | 'bulk-update-preview';
 
 export type ToolRowSpec = {
-  verb: 'GET' | 'POST' | 'EXEC';
+  verb: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'EXEC';
   path: string;
   filter?: string;
   status?: string;
@@ -71,190 +78,253 @@ export type Flow = {
   artifact?: { id: string; kind: ArtifactKind; label: string; filter?: string; dataJson?: string };
 };
 
-// ─── at_risk_opps ────────────────────────────────────────────────────
-const AT_RISK_FLOW: Flow = {
-  id: 'at_risk_opps',
-  title: 'At-risk opportunity scorecard',
+// ─── soql_explore ────────────────────────────────────────────────────
+const SOQL_DEMO = "SELECT Id, Name, StageName, Amount, OwnerId FROM Opportunity WHERE StageName != 'Closed Won' AND StageName != 'Closed Lost' AND CloseDate = THIS_QUARTER ORDER BY Amount DESC LIMIT 25";
+
+const SOQL_EXPLORE_FLOW: Flow = {
+  id: 'soql_explore',
+  title: 'SOQL: top open Q2 opps',
   artifact: {
-    id: 'art_oh_atrisk',
-    kind: 'opp-health',
-    label: 'At-risk opportunities · 10',
+    id: 'art_soql_q2_top',
+    kind: 'soql-results',
+    label: 'SOQL · Q2 open opps · 25',
+    dataJson: JSON.stringify({ soql: SOQL_DEMO }),
   },
   steps: [
-    { kind: 'user', text: 'Show me at-risk opportunities' },
+    { kind: 'user', text: 'Run a SOQL for the top open opps closing this quarter' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Scanning Atlas Tech pipeline. Filtering on past CloseDate, stale activity, missing NextStep, and Negotiation-stage opps with 60+ days of silence.' },
+      text: `Running:\n\n\`\`\`soql\n${SOQL_DEMO}\n\`\`\`` },
     { kind: 'tools', delay: 220, rows: [
-      { verb: 'GET', path: '/services/data/v60.0/queryAll', filter: "SELECT Id,Name,StageName,Amount,LastActivityDate,NextStep FROM Opportunity WHERE IsClosed=false", status: '200', result: '38 rows' },
-      { verb: 'EXEC', path: 'find_at_risk_opps', filter: 'limit=10', status: 'ok', result: '10 opps with 2+ risks' },
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: SOQL_DEMO, status: '200', result: '25 rows' },
+      { verb: 'EXEC', path: 'sf_data_query', filter: 'limit=25', status: 'ok', result: '25 records · 5 fields' },
     ] },
-    { kind: 'libs', delay: 180, items: [
+    { kind: 'libs', delay: 160, items: [
       { pkg: '@salesforce/sf-api', ver: '4.12.0' },
       { pkg: '@tanstack/table-core', ver: '8.21.3' },
-      { pkg: 'date-fns', ver: '3.6.0' },
     ] },
-    { kind: 'building', delay: 220, label: 'Opportunity Health Scorecard', sub: 'aggregating risk signals' },
-    { kind: 'artifact-card', delay: 350,
-      artifactId: 'art_oh_atrisk',
-      title: 'At-risk opportunity scorecard',
-      sub: 'OPP-HEALTH · 10 ROWS',
-      meta: '**$2.27M** total at-risk pipeline · top: Mosaic Insurance - Claims Automation ($295k)',
-      icon: '⚠' },
-    { kind: 'agent-stream', delay: 200,
-      text: 'Top patterns: 28 Negotiation deals with no activity in 60+ days (~$4.9M) and 14 of them are also missing NextStep. The 10 worst offenders are in the scorecard. Want me to draft a hygiene update or queue a Close-Lost batch for the silent Negotiation pool?' },
+    { kind: 'building', delay: 200, label: 'SOQL Results', sub: 'projecting 5 fields × 25 rows' },
+    { kind: 'artifact-card', delay: 320,
+      artifactId: 'art_soql_q2_top',
+      title: 'Open Q2 opportunities — top 25 by Amount',
+      sub: 'SOQL-RESULTS · 25 ROWS',
+      meta: '**$4.32M unweighted** · top: Cobalt Retail Group - POS Refresh ($410k)',
+      icon: '◫' },
     { kind: 'suggest', delay: 150, items: [
-      'Update the stale opps missing NextStep',
-      'Close-Lost the silent Negotiation opps',
+      'Show my pipeline as a kanban',
+      "What's our Q2 forecast?",
+      'Tell me about Pacific Health Systems',
+    ] },
+  ],
+};
+
+// ─── pipeline_kanban ─────────────────────────────────────────────────
+const KANBAN_FLOW: Flow = {
+  id: 'pipeline_kanban',
+  title: 'Pipeline kanban (open opps)',
+  artifact: {
+    id: 'art_pipe_kanban',
+    kind: 'pipeline-kanban',
+    label: 'Pipeline · kanban',
+  },
+  steps: [
+    { kind: 'user', text: 'Show my pipeline as a kanban' },
+    { kind: 'agent-stream', delay: 200,
+      text: 'Pulling all open opportunities (Prospecting → Negotiation) and bucketing by StageName.' },
+    { kind: 'tools', delay: 220, rows: [
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Amount, StageName, OwnerId FROM Opportunity WHERE StageName NOT IN ('Closed Won', 'Closed Lost')", status: '200', result: '37 rows' },
+      { verb: 'EXEC', path: 'render_pipeline_kanban', filter: '5 stages', status: 'ok', result: 'rendered' },
+    ] },
+    { kind: 'libs', delay: 160, items: [
+      { pkg: '@salesforce/sf-api', ver: '4.12.0' },
+    ] },
+    { kind: 'building', delay: 200, label: 'Pipeline Kanban', sub: 'rendering 37 cards across 5 stages' },
+    { kind: 'artifact-card', delay: 320,
+      artifactId: 'art_pipe_kanban',
+      title: 'Open pipeline · kanban view',
+      sub: 'PIPELINE-KANBAN · 37 OPPS',
+      meta: '**$5.81M unweighted** · Negotiation column carries 76% of count',
+      icon: '◫' },
+    { kind: 'suggest', delay: 150, items: [
+      'Which cases are breaching SLA?',
+      'Qualify hot leads from the last 7 days',
       "What's our Q2 forecast?",
     ] },
   ],
 };
 
-// ─── hygiene_bulk_update — stake bulk-update, 14 records, reversible ──
-const HYGIENE_PREVIEW: ApprovalPreviewRow[] = [
-  { id: '006N0001', name: 'Northwind Robotics - Platform Renewal',     currentValue: '', newValue: 'Confirm renewal terms with procurement' },
-  { id: '006N0002', name: 'Pacific Health Systems - EHR Expansion',    currentValue: '', newValue: 'Confirm renewal terms with procurement' },
-  { id: '006N0003', name: 'Crestline Capital - Risk Module',           currentValue: '', newValue: 'Confirm renewal terms with procurement' },
-  { id: '006N0004', name: 'Lumen Software - Enterprise License',       currentValue: '', newValue: 'Confirm renewal terms with procurement' },
-  { id: '006N0005', name: 'Cobalt Retail Group - POS Refresh',         currentValue: '', newValue: 'Confirm renewal terms with procurement' },
-];
-
-const HYGIENE_FLOW: Flow = {
-  id: 'hygiene_bulk_update',
-  title: 'Bulk update — NextStep on stale opps',
+// ─── account_360 ─────────────────────────────────────────────────────
+const ACCOUNT_360_FLOW: Flow = {
+  id: 'account_360',
+  title: 'Account 360 — Pacific Health Systems',
   artifact: {
-    id: 'art_bup_hygiene',
-    kind: 'bulk-update-preview',
-    label: 'Hygiene · 14 opps',
-    dataJson: JSON.stringify({ batchId: 'btch_sfdc_hygiene_demo' }),
+    id: 'art_acct_pacific',
+    kind: 'account-360',
+    label: 'Account · Pacific Health Systems',
+    dataJson: JSON.stringify({ accountId: '001A0002' }),
   },
   steps: [
-    { kind: 'user', text: 'Update the stale opps missing NextStep' },
+    { kind: 'user', text: 'Tell me about Pacific Health Systems' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Pulling Negotiation-stage opportunities with no NextStep and last activity 60+ days ago. Found **14** matching opps across 4 AEs, totaling **$2.85M** in unweighted pipeline.' },
-    { kind: 'tools', delay: 220, rows: [
-      { verb: 'EXEC', path: 'find_opps_missing_field', filter: 'field=NextStep', status: 'ok', result: '14 rows' },
-      { verb: 'EXEC', path: 'propose_opp_field_update', filter: 'NextStep="Confirm renewal terms with procurement"', status: 'ok', result: 'batchId=btch_sfdc_hygiene_demo · stake=bulk-update' },
-    ] },
-    { kind: 'libs', delay: 160, items: [
-      { pkg: '@salesforce/sf-api', ver: '4.12.0' },
-      { pkg: '@tanstack/table-core', ver: '8.21.3' },
-    ] },
-    { kind: 'building', delay: 200, label: 'Bulk Update Preview', sub: 'rendering 14 staged changes' },
-    { kind: 'artifact-card', delay: 320,
-      artifactId: 'art_bup_hygiene',
-      title: 'NextStep hygiene · 14 opps',
-      sub: 'BULK-UPDATE · STAKE=BULK-UPDATE',
-      meta: '**14 records** · reversible · single approver',
-      icon: '✎' },
-    { kind: 'approval', delay: 220, payload: {
-      batchId: 'btch_sfdc_hygiene_demo',
-      stake: 'bulk-update',
-      title: 'Set NextStep on 14 stale opportunities',
-      summary: 'Apply NextStep="Confirm renewal terms with procurement" to 14 Negotiation opps with no recent activity. Reversible. Single approver required.',
-      recordCount: 14,
-      preview: HYGIENE_PREVIEW,
-    } },
-    { kind: 'agent-stream', delay: 200,
-      text: 'Staged as `btch_sfdc_hygiene_demo`. Approve below to apply across all 14 records; reject to abandon the batch.' },
-  ],
-};
-
-// ─── mass_stage_correction — stake mass-action, 28 records, dual ─────
-const MASS_PREVIEW: ApprovalPreviewRow[] = [
-  { id: '006N0001', name: 'Northwind Robotics - Platform Renewal',     currentValue: 'Negotiation', newValue: 'Closed Lost' },
-  { id: '006N0002', name: 'Pacific Health Systems - EHR Expansion',    currentValue: 'Negotiation', newValue: 'Closed Lost' },
-  { id: '006N0003', name: 'Crestline Capital - Risk Module',           currentValue: 'Negotiation', newValue: 'Closed Lost' },
-  { id: '006N0005', name: 'Cobalt Retail Group - POS Refresh',         currentValue: 'Negotiation', newValue: 'Closed Lost' },
-  { id: '006N0012', name: 'Granite Industrials - Field Service',       currentValue: 'Negotiation', newValue: 'Closed Lost' },
-];
-
-const MASS_FLOW: Flow = {
-  id: 'mass_stage_correction',
-  title: 'Close-Lost silent Negotiation opps',
-  artifact: {
-    id: 'art_bup_mass',
-    kind: 'bulk-update-preview',
-    label: 'Close-Lost · 28 opps',
-    dataJson: JSON.stringify({ batchId: 'btch_sfdc_mass_demo' }),
-  },
-  steps: [
-    { kind: 'user', text: 'Close-Lost the silent Negotiation opps' },
-    { kind: 'agent-stream', delay: 200,
-      text: 'Pulling Negotiation-stage opps with **60+ days** of zero activity. Found **28 deals** ($4.93M unweighted) across all 4 AEs. Closing these as Lost is **externally visible** (customer-facing) and irreversible — that escalates the stake to **mass-action**, which needs dual control.' },
+      text: 'Pulling the account record, open opportunities, recent activity, and key contacts for Pacific Health Systems.' },
     { kind: 'tools', delay: 240, rows: [
-      { verb: 'EXEC', path: 'find_stale_opps', filter: 'minDaysSinceActivity=60&stage=Negotiation', status: 'ok', result: '28 rows' },
-      { verb: 'EXEC', path: 'propose_stage_change', filter: 'newStage=Closed Lost', status: 'ok', result: 'batchId=btch_sfdc_mass_demo · stake=mass-action' },
+      { verb: 'GET', path: '/services/data/v60.0/sobjects/Account/001A0002', status: '200', result: 'Pacific Health Systems' },
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, StageName, Amount, CloseDate FROM Opportunity WHERE AccountId = '001A0002'", status: '200', result: '4 rows' },
+      { verb: 'EXEC', path: 'sf_activity_list', filter: 'relatedTo=001A0002', status: 'ok', result: '4 activities' },
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Title, Email FROM Contact WHERE AccountId = '001A0002'", status: '200', result: '3 contacts' },
     ] },
     { kind: 'libs', delay: 160, items: [
       { pkg: '@salesforce/sf-api', ver: '4.12.0' },
-      { pkg: '@tanstack/table-core', ver: '8.21.3' },
+      { pkg: 'recharts', ver: '2.13.3' },
     ] },
-    { kind: 'building', delay: 220, label: 'Close-Lost Batch Preview', sub: 'rendering 28 staged stage changes' },
-    { kind: 'artifact-card', delay: 320,
-      artifactId: 'art_bup_mass',
-      title: 'Close-Lost · 28 silent Negotiation opps',
-      sub: 'MASS-ACTION · DUAL CONTROL',
-      meta: '**28 records** · $4.93M unweighted · irreversible · second approver required',
-      icon: '⚠' },
-    { kind: 'approval', delay: 240, payload: {
-      batchId: 'btch_sfdc_mass_demo',
-      stake: 'mass-action',
-      title: 'Move 28 opportunities to Closed Lost',
-      summary: 'Set StageName=Closed Lost on 28 Negotiation opps with 60+ days inactivity. Externally visible to customers in the org\'s shared dashboards. Requires dual approval (you + Manager).',
-      recordCount: 28,
-      preview: MASS_PREVIEW,
-      requiresSecondApprover: true,
-    } },
+    { kind: 'building', delay: 220, label: 'Account 360', sub: 'assembling opps + activity + contacts' },
+    { kind: 'artifact-card', delay: 350,
+      artifactId: 'art_acct_pacific',
+      title: 'Pacific Health Systems — Account 360',
+      sub: 'ACCOUNT-360 · HEALTHCARE',
+      meta: '**$672k open pipeline** · 4 opps · 3 contacts · health 78',
+      icon: '◎' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Staged as `btch_sfdc_mass_demo`. Renée Okafor (Manager) is the second approver. Click Approve to send the request; once Renée signs off the move applies to all 28 records.' },
+      text: 'Linh Tran (CIO) is the economic buyer on the EHR Expansion. Telehealth opp has a CFO escalation pending and there\'s a P1 case open ("EHR sync failing"). Recommend a CFO touch this week.' },
+    { kind: 'suggest', delay: 150, items: [
+      'Log a meeting with Linh Tran',
+      'Show me cases breaching SLA',
+      'Approve the Pacific Health EHR discount',
+    ] },
   ],
 };
 
-// ─── pipeline_forecast — read-only ────────────────────────────────────
-const FORECAST_FLOW: Flow = {
-  id: 'pipeline_forecast',
-  title: 'Q2 pipeline forecast',
+// ─── lead_qualification ──────────────────────────────────────────────
+const LEAD_PREVIEW: ApprovalPreviewRow[] = [
+  { id: '00Q0001', name: 'Alex Rivera — Northwind Robotics',     currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0011', name: 'Quinn Rao — Aurora Diagnostics',       currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0014', name: 'Cameron Holt — Polaris Data',          currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0017', name: 'Logan Fox — Pacific Health Systems',   currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0020', name: 'Riley Adams — Crestline Capital',      currentValue: 'New',     newValue: 'Qualified' },
+];
+
+const LEAD_FLOW: Flow = {
+  id: 'lead_qualification',
+  title: 'Qualify hot leads from the last 7 days',
   artifact: {
-    id: 'art_pf_q2',
-    kind: 'pipeline-forecast',
-    label: 'Q2 forecast · weighted',
+    id: 'art_lead_qual',
+    kind: 'bulk-update-preview',
+    label: 'Qualify · 5 leads',
+    dataJson: JSON.stringify({ batchId: 'btch_sfdc_leadqual_demo' }),
+  },
+  steps: [
+    { kind: 'user', text: 'Qualify hot leads from the last 7 days' },
+    { kind: 'agent-stream', delay: 200,
+      text: 'Pulling Status=New leads created in the last 7 days, then scoring on source × company size × engagement.' },
+    { kind: 'tools', delay: 240, rows: [
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Company, Status, LeadSource, CreatedDate FROM Lead WHERE CreatedDate = LAST_N_DAYS:7 AND Status = 'New'", status: '200', result: '6 rows' },
+      { verb: 'EXEC', path: 'render_lead_scoring', filter: '6 leads scored', status: 'ok', result: 'top 5 ≥ 70' },
+      { verb: 'PATCH', path: 'sf_data_update', filter: "Status='Qualified' on 5 leads", status: 'ok', result: 'batchId=btch_sfdc_leadqual_demo · stake=bulk-update' },
+    ] },
+    { kind: 'libs', delay: 160, items: [
+      { pkg: '@salesforce/sf-api', ver: '4.12.0' },
+    ] },
+    { kind: 'building', delay: 220, label: 'Lead Qualification Preview', sub: 'staging 5 Status=Qualified updates' },
+    { kind: 'artifact-card', delay: 350,
+      artifactId: 'art_lead_qual',
+      title: 'Qualify top 5 leads (score ≥ 70)',
+      sub: 'BULK-UPDATE · STAKE=BULK-UPDATE',
+      meta: '**5 records** · reversible · single approver',
+      icon: '✎' },
+    { kind: 'approval', delay: 240, payload: {
+      batchId: 'btch_sfdc_leadqual_demo',
+      stake: 'bulk-update',
+      title: 'Qualify 5 high-score leads',
+      summary: 'Set Status=Qualified on 5 Inbound leads created in the last 7d with score ≥ 70. Reversible. Single approver required.',
+      recordCount: 5,
+      preview: LEAD_PREVIEW,
+    } },
+    { kind: 'agent-stream', delay: 200,
+      text: 'Staged as `btch_sfdc_leadqual_demo`. Approve to flip Status to Qualified across all 5; reject to abandon.' },
+  ],
+};
+
+// ─── forecast_review ─────────────────────────────────────────────────
+const FORECAST_FLOW: Flow = {
+  id: 'forecast_review',
+  title: 'Q2 forecast review',
+  artifact: {
+    id: 'art_fc_q2',
+    kind: 'forecast',
+    label: 'Q2 forecast',
+    dataJson: JSON.stringify({ reportId: 'ForecastQ2' }),
   },
   steps: [
     { kind: 'user', text: "What's our Q2 forecast?" },
     { kind: 'agent-stream', delay: 200,
-      text: 'Pulling CloseDate ∈ [2026-04-01, 2026-06-30] and rolling up weighted by stage probability. Quota total across 4 AEs is **$3.1M**.' },
+      text: 'Running the **ForecastQ2** report — weighted pipeline rollup for CloseDate ∈ [2026-04-01, 2026-06-30]. Quota total across 4 AEs is $3.1M.' },
     { kind: 'tools', delay: 220, rows: [
-      { verb: 'GET', path: '/services/data/v60.0/queryAll', filter: 'SELECT Id,OwnerId,StageName,Amount,Probability,CloseDate FROM Opportunity', status: '200', result: '45 rows' },
-      { verb: 'EXEC', path: 'get_pipeline_forecast', filter: 'quarter=Q2', status: 'ok', result: 'totalWeighted ≈ $2.41M · attainment 77.9%' },
+      { verb: 'EXEC', path: 'sf_analytics_run_report', filter: 'reportId=ForecastQ2', status: 'ok', result: 'totalWeighted ≈ $2.41M · attainment 77.9%' },
     ] },
     { kind: 'libs', delay: 160, items: [
       { pkg: '@salesforce/sf-api', ver: '4.12.0' },
-      { pkg: '@tanstack/table-core', ver: '8.21.3' },
       { pkg: 'recharts', ver: '2.13.3' },
     ] },
-    { kind: 'building', delay: 200, label: 'Pipeline Forecast', sub: 'weighting by stage probability' },
+    { kind: 'building', delay: 200, label: 'Forecast Tile', sub: 'commit / bestCase / pipeline / quota' },
     { kind: 'artifact-card', delay: 320,
-      artifactId: 'art_pf_q2',
-      title: 'Q2 pipeline forecast',
-      sub: 'PIPELINE-FORECAST · WEIGHTED',
-      meta: '**$2.41M weighted** · 77.9% of $3.1M quota · Negotiation drives 60% of weighted total',
+      artifactId: 'art_fc_q2',
+      title: 'Q2 pipeline forecast (weighted)',
+      sub: 'FORECAST · WEIGHTED',
+      meta: '**$2.41M weighted** · 77.9% of $3.1M quota · Negotiation drives ~60% of weighted total',
       icon: '$' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Priya is the only AE pacing above 100%. Marcus and Devon are sub-80%. The 28 stale Negotiation deals make up most of Marcus and Hana\'s gap — closing or cleaning them would unblock a real forecast read.' },
+      text: 'Priya is the only AE pacing above 100%. Marcus and Devon are sub-80%. 28 stale Negotiation deals account for most of the gap — closing or cleaning them would unblock a real read.' },
     { kind: 'suggest', delay: 150, items: [
-      'Show me at-risk opportunities',
-      'Close-Lost the silent Negotiation opps',
-      'Update the stale opps missing NextStep',
+      'Show my pipeline as a kanban',
+      'Log a call with Marcus',
+      'Which cases are breaching SLA?',
+    ] },
+  ],
+};
+
+// ─── case_sla_review ─────────────────────────────────────────────────
+const CASE_SLA_FLOW: Flow = {
+  id: 'case_sla_review',
+  title: 'Cases breaching SLA',
+  artifact: {
+    id: 'art_case_sla',
+    kind: 'case-sla',
+    label: 'Cases · SLA review',
+  },
+  steps: [
+    { kind: 'user', text: 'Which cases are breaching SLA?' },
+    { kind: 'agent-stream', delay: 200,
+      text: 'Pulling open cases past their SLA target or within 24h. Sorting by slaPct desc.' },
+    { kind: 'tools', delay: 220, rows: [
+      { verb: 'EXEC', path: 'sf_case_sla_breach', filter: '', status: 'ok', result: '5 cases ≥ 75% SLA · 2 breached' },
+      { verb: 'EXEC', path: 'render_case_sla', filter: '5 cases', status: 'ok', result: 'rendered' },
+    ] },
+    { kind: 'libs', delay: 160, items: [
+      { pkg: '@salesforce/sf-api', ver: '4.12.0' },
+    ] },
+    { kind: 'building', delay: 200, label: 'Case SLA Heatmap', sub: 'sorting 5 cases by SLA %' },
+    { kind: 'artifact-card', delay: 320,
+      artifactId: 'art_case_sla',
+      title: 'Open cases — SLA pressure',
+      sub: 'CASE-SLA · 5 CASES',
+      meta: '**2 P1 breached** · Pacific Health (EHR sync), Mosaic (Claims API)',
+      icon: '⚠' },
+    { kind: 'agent-stream', delay: 200,
+      text: 'P1 cases C-1001 (Pacific Health · EHR sync) and C-1002 (Mosaic · Claims API) are past their SLA. Want me to reassign the open P1s to Renée Okafor (Manager)?' },
+    { kind: 'suggest', delay: 150, items: [
+      'Reassign P1 cases to Renée Okafor',
+      'Tell me about Pacific Health Systems',
+      'Log a call with Renée',
     ] },
   ],
 };
 
 export const FLOWS: Record<string, Flow> = {
-  at_risk_opps: AT_RISK_FLOW,
-  hygiene_bulk_update: HYGIENE_FLOW,
-  mass_stage_correction: MASS_FLOW,
-  pipeline_forecast: FORECAST_FLOW,
+  soql_explore: SOQL_EXPLORE_FLOW,
+  pipeline_kanban: KANBAN_FLOW,
+  account_360: ACCOUNT_360_FLOW,
+  lead_qualification: LEAD_FLOW,
+  forecast_review: FORECAST_FLOW,
+  case_sla_review: CASE_SLA_FLOW,
 };
 
 export const LOGISTICS_FLOWS: Record<string, Flow> = {};
@@ -263,23 +333,25 @@ export type FlowId = string;
 
 export function matchFlow(text: string, _dataset: DatasetKey = 'default'): string | null {
   const t = text.toLowerCase();
-  // Order matters: more specific (mass / hygiene) before less specific.
-  if (
-    t.includes('close lost') ||
-    t.includes('close-lost') ||
-    t.includes('stalled negotiation') ||
-    (t.includes('negotiation') && t.includes('60'))
-  ) {
-    return 'mass_stage_correction';
+  // Order: specific before generic.
+  if (t.includes('account 360') || t.includes('pacific health') || t.includes('account360')) {
+    return 'account_360';
   }
-  if (t.includes('next step') || t.includes('nextstep') || t.includes('missing') || t.includes('hygiene') || t.includes('stale opps')) {
-    return 'hygiene_bulk_update';
+  if (t.includes('sla') || t.includes('p1 case') || t.includes('breach') ||
+      (t.includes('case') && (t.includes('which') || t.includes('open')))) {
+    return 'case_sla_review';
   }
-  if (t.includes('forecast') || t.includes('q2') || t.includes('rollup') || t.includes('attainment') || t.includes('quota')) {
-    return 'pipeline_forecast';
+  if (t.includes('lead') && (t.includes('qualif') || t.includes('score') || t.includes('hot'))) {
+    return 'lead_qualification';
   }
-  if (t.includes('at risk') || t.includes('at-risk') || t.includes('risk') || t.includes('scorecard') || t.includes('stalled')) {
-    return 'at_risk_opps';
+  if (t.includes('forecast') || t.includes('/forecast') || t.includes('attainment') || t.includes('q2 ') || t.endsWith('q2') || t.includes('quota')) {
+    return 'forecast_review';
+  }
+  if (t.includes('kanban') || (t.includes('pipeline') && !t.includes('forecast'))) {
+    return 'pipeline_kanban';
+  }
+  if (t.includes('soql') || t.includes('select ') || t.includes('query')) {
+    return 'soql_explore';
   }
   return null;
 }

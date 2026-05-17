@@ -17,8 +17,14 @@ const ARTIFACT_KIND_LABEL: Record<ArtifactKind, string> = {
   'document': 'Document',
   'slides': 'Slides',
   'custom-dashboard': 'Custom chart',
-  'opp-health': 'Opp scorecard',
-  'pipeline-forecast': 'Pipeline forecast',
+  'soql-results': 'SOQL results',
+  'pipeline-kanban': 'Pipeline kanban',
+  'account-360': 'Account 360',
+  'lead-scoring': 'Lead scoring',
+  'forecast': 'Forecast',
+  'dashboard-tiles': 'Dashboard',
+  'case-sla': 'Case SLA',
+  'activity-timeline': 'Activity timeline',
   'bulk-update-preview': 'Bulk update preview',
 };
 
