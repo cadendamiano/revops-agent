@@ -27,11 +27,11 @@ function groupReadTools(): ToolGroup[] {
   );
   const ui = READ_TOOLS.filter(t => ['render_artifact','render_html_artifact'].includes(t.name));
   return [
-    { label: 'AP (Accounts Payable)', tools: ap, accent: 'var(--teal)' },
+    { label: 'AP (Accounts Payable)', tools: ap, accent: 'var(--accent)' },
     { label: 'AR (Accounts Receivable)', tools: ar, accent: 'var(--pos)' },
     { label: 'Spend & Expense', tools: se, accent: 'var(--warn)' },
     { label: 'Org / Infra', tools: org, accent: 'var(--ink-3)' },
-    { label: 'UI / Artifacts', tools: ui, accent: 'var(--teal-ink)' },
+    { label: 'UI / Artifacts', tools: ui, accent: 'var(--accent-deep)' },
   ];
 }
 
@@ -201,7 +201,7 @@ export function ToolsColumn() {
 
   const readGroups = groupReadTools();
 
-  const writeGroup: ToolGroup = { label: 'Write tools', tools: WRITE_TOOLS, accent: 'var(--neg)' };
+  const writeGroup: ToolGroup = { label: 'Write tools', tools: WRITE_TOOLS, accent: 'var(--danger)' };
   const formGroup: ToolGroup = { label: 'Form / UX', tools: FORM_TOOLS, accent: 'var(--ink-4)' };
   const internalGroup: ToolGroup = { label: 'Internal (not sent to LLM)', tools: INTERNAL_TOOLS, accent: 'var(--ink-4)' };
 

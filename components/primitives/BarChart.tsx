@@ -15,7 +15,7 @@ export function BarChart({
   valueKey = 'amount',
   labelKey = 'cat',
   height = 220,
-  accent = 'var(--teal)',
+  accent = 'var(--accent)',
 }: Props) {
   const values = data.map(d => Number(d[valueKey]));
   const max = Math.max(...values);
