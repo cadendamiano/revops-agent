@@ -19,8 +19,8 @@ const Filter = () => (
 
 const FolderPlus = () => (
   <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path d="M1.5 3.5h3l1 1h6v6.5h-10V3.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-    <path d="M6.5 7v2.5M5.25 8.25h2.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+    <path d="M1.5 3.5h3l1 1h6v6.5h-10V3.5z" stroke="var(--accent)" strokeWidth="1.1" strokeLinejoin="round" />
+    <path d="M6.5 7v2.5M5.25 8.25h2.5" stroke="var(--accent)" strokeWidth="1.1" strokeLinecap="round" />
   </svg>
 );
 
@@ -34,7 +34,7 @@ const Folder = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
     <path
       d="M1.6 4.2c0-.55.45-1 1-1H5.4l1.1 1.1H11.4c.55 0 1 .45 1 1v5.5c0 .55-.45 1-1 1H2.6c-.55 0-1-.45-1-1V4.2z"
-      stroke="currentColor"
+      stroke="var(--accent)"
       strokeWidth="1.2"
       strokeLinejoin="round"
       fill="none"

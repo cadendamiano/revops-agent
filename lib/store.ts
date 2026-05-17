@@ -49,6 +49,7 @@ export type Tweaks = {
   showConnectors: boolean;
   modelId: ModelId;
   showCodeView: boolean;
+  darkMode: boolean;
 };
 
 export type SettingsStatus = { anthropic: boolean; gemini: boolean; llmgateway: boolean };
@@ -156,6 +157,7 @@ const DEFAULT_TWEAKS: Tweaks = {
   showConnectors: true,
   modelId: DEFAULT_MODEL_ID,
   showCodeView: false,
+  darkMode: false,
 };
 
 const DEFAULT_THREAD_TITLES = new Set(['New task', 'New thread', 'Untitled thread', 'Untitled task']);

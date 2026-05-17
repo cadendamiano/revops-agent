@@ -8,8 +8,14 @@ import { HtmlArtifact } from './artifacts/HtmlArtifact';
 import { DocumentArtifact } from './artifacts/DocumentArtifact';
 import { SpreadsheetArtifact } from './artifacts/SpreadsheetArtifact';
 import { SlidesArtifact } from './artifacts/SlidesArtifact';
-import { OppHealthScorecard } from './artifacts/OppHealthScorecard';
-import { PipelineForecast } from './artifacts/PipelineForecast';
+import { SoqlResults } from './artifacts/SoqlResults';
+import { PipelineKanban } from './artifacts/PipelineKanban';
+import { Account360 } from './artifacts/Account360';
+import { LeadScoringTable } from './artifacts/LeadScoringTable';
+import { ForecastTile } from './artifacts/ForecastTile';
+import { DashboardTiles } from './artifacts/DashboardTiles';
+import { CaseSlaHeatmap } from './artifacts/CaseSlaHeatmap';
+import { ActivityTimeline } from './artifacts/ActivityTimeline';
 import { BulkUpdatePreview } from './artifacts/BulkUpdatePreview';
 import { ArtifactPreview } from './ArtifactPreview';
 import { ArtifactCode } from './ArtifactCode';
@@ -22,8 +28,14 @@ function glyphFor(kind: ArtifactKind) {
   if (kind === 'spreadsheet') return <Icon.Table />;
   if (kind === 'custom-dashboard') return <Icon.Chart />;
   if (kind === 'slides') return <Icon.Doc />;
-  if (kind === 'opp-health') return <Icon.Table />;
-  if (kind === 'pipeline-forecast') return <Icon.Chart />;
+  if (kind === 'soql-results') return <Icon.Table />;
+  if (kind === 'pipeline-kanban') return <Icon.Table />;
+  if (kind === 'account-360') return <Icon.Chart />;
+  if (kind === 'lead-scoring') return <Icon.Table />;
+  if (kind === 'forecast') return <Icon.Chart />;
+  if (kind === 'dashboard-tiles') return <Icon.Chart />;
+  if (kind === 'case-sla') return <Icon.Table />;
+  if (kind === 'activity-timeline') return <Icon.Doc />;
   if (kind === 'bulk-update-preview') return <Icon.Table />;
   return <Icon.Doc />;
 }
@@ -191,8 +203,14 @@ export function ArtifactPane() {
                 {view === 'logic' && cur.kind === 'custom-dashboard' && <HtmlArtifact artifact={cur} />}
                 {view === 'logic' && cur.kind === 'document' && <DocumentArtifact artifact={cur} />}
                 {view === 'logic' && cur.kind === 'slides' && <SlidesArtifact artifact={cur} />}
-                {view === 'logic' && cur.kind === 'opp-health' && <OppHealthScorecard artifact={cur} />}
-                {view === 'logic' && cur.kind === 'pipeline-forecast' && <PipelineForecast artifact={cur} />}
+                {view === 'logic' && cur.kind === 'soql-results' && <SoqlResults artifact={cur} />}
+                {view === 'logic' && cur.kind === 'pipeline-kanban' && <PipelineKanban artifact={cur} />}
+                {view === 'logic' && cur.kind === 'account-360' && <Account360 artifact={cur} />}
+                {view === 'logic' && cur.kind === 'lead-scoring' && <LeadScoringTable artifact={cur} />}
+                {view === 'logic' && cur.kind === 'forecast' && <ForecastTile artifact={cur} />}
+                {view === 'logic' && cur.kind === 'dashboard-tiles' && <DashboardTiles artifact={cur} />}
+                {view === 'logic' && cur.kind === 'case-sla' && <CaseSlaHeatmap artifact={cur} />}
+                {view === 'logic' && cur.kind === 'activity-timeline' && <ActivityTimeline artifact={cur} />}
                 {view === 'logic' && cur.kind === 'bulk-update-preview' && <BulkUpdatePreview artifact={cur} />}
               </div>
             </>
