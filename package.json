@@ -21,7 +21,7 @@
     "electron:build": "npm run electron:build-next && npm run electron:copy-standalone && npm run electron:build-main",
     "preelectron:dev": "npm run preflight",
     "electron:dev": "npm run electron:build && electron .",
-    "preelectron:dev:fast": "npm run preflight && npm run electron:build-main",
+    "preelectron:dev:fast": "npm run electron:build-main",
     "electron:dev:fast": "concurrently -k -s first -n next,electron -c blue,magenta \"next dev -p 3100\" \"wait-on http://127.0.0.1:3100 && cross-env ELECTRON_DEV_URL=http://127.0.0.1:3100 electron .\"",
     "electron:dist": "npm run electron:build && electron-builder --mac",
     "electron:dist:zip": "npm run electron:build && electron-builder --mac --config.mac.target=zip"

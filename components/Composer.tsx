@@ -221,7 +221,7 @@ export function Composer() {
           <div className="composer-spacer" />
           <ModelPicker />
           <button className="send-btn" onClick={onSubmit} disabled={streaming}>
-            Send <span className="kbd">↵</span>
+            ↵
           </button>
         </div>
       </div>
