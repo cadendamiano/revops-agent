@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useStore, type Workspace, type Artifact } from '@/lib/store';
 import { Icon } from './primitives/Icon';
 
@@ -142,12 +142,14 @@ const KIND_LABELS: Record<string, string> = {
   'crm-flow': 'Flows',
 };
 
-function kindIcon(kind: string): string {
-  if (kind === 'spend-chart' || kind === 'liquidity-burndown') return '\u{1F4CA}';
-  if (kind === 'custom-dashboard') return '\u{1F5A5}';
-  if (kind === 'document') return '\u{1F4C4}';
-  if (kind === 'ap-table') return '\u{1F4CB}';
-  return '⚙';
+function kindIcon(kind: string): React.ReactNode {
+  if (kind === 'spend-chart' || kind === 'liquidity-burndown') return <Icon.Chart />;
+  if (kind === 'custom-dashboard') return <Icon.Chart />;
+  if (kind === 'document') return <Icon.Doc />;
+  if (kind === 'ap-table') return <Icon.Table />;
+  if (kind === 'rule-net15' || kind === 'sweep-rule') return <Icon.Rule />;
+  if (kind === 'automation' || kind === 'crm-flow') return <Icon.Flow />;
+  return <Icon.Gear />;
 }
 
 function ArtifactList({
@@ -194,6 +196,86 @@ function ArtifactList({
   );
 }
 
+type Thread = Workspace['threads'][number];
+
+function ThreadItem({
+  thread: t, workspaceId, isActive, isExpanded,
+  renamingThreadId, threadRenameValue,
+  onActivate, onStartRename, onRenameChange, onRenameCommit, onRenameCancel,
+  onDelete, openArtifact,
+}: {
+  thread: Thread; workspaceId: string; isActive: boolean; isExpanded: boolean;
+  renamingThreadId: string | null; threadRenameValue: string;
+  onActivate: () => void;
+  onStartRename: () => void; onRenameChange: (v: string) => void;
+  onRenameCommit: () => void; onRenameCancel: () => void;
+  onDelete: () => void;
+  openArtifact: (workspaceId: string, threadId: string, artifactId: string) => void;
+}) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const hasArtifacts = t.artifacts.length > 0;
+
+  return (
+    <div className="ws-thread-group">
+      <div
+        className={'ws-thread-item' + (isActive ? ' active' : '')}
+        onClick={onActivate}
+      >
+        {hasArtifacts && (
+          <span className={'ws-thread-chevron' + (isExpanded ? ' open' : '')}>
+            <ChevronRight />
+          </span>
+        )}
+        <span className="ws-thread-glyph"><span className="ws-thread-dot" /></span>
+        {renamingThreadId === t.id ? (
+          <input
+            className="rail-rename-input"
+            value={threadRenameValue}
+            autoFocus
+            onClick={e => e.stopPropagation()}
+            onChange={e => onRenameChange(e.target.value)}
+            onBlur={onRenameCommit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') onRenameCommit();
+              else if (e.key === 'Escape') onRenameCancel();
+            }}
+          />
+        ) : (
+          <span
+            className="ws-thread-title"
+            onDoubleClick={e => { e.stopPropagation(); onStartRename(); }}
+          >{t.title}</span>
+        )}
+        {hasArtifacts && (
+          <span className="ws-thread-meta">{t.artifacts.length}</span>
+        )}
+        {confirmingDelete ? (
+          <span className="ws-inline-confirm">
+            <button className="ws-confirm-yes" onClick={e => { e.stopPropagation(); onDelete(); }}>Delete</button>
+            <button className="ws-confirm-cancel" onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }}>Cancel</button>
+          </span>
+        ) : (
+          <button
+            className="icon-btn ws-thread-del"
+            aria-label="Delete task"
+            onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}
+          >
+            <Icon.Trash />
+          </button>
+        )}
+      </div>
+      {hasArtifacts && isExpanded && (
+        <ArtifactList
+          artifacts={t.artifacts}
+          workspaceId={workspaceId}
+          threadId={t.id}
+          onOpen={openArtifact}
+        />
+      )}
+    </div>
+  );
+}
+
 function WorkspaceItem({ workspace }: { workspace: Workspace }) {
   const expanded = useStore(s => s.expandedWorkspaceIds.includes(workspace.id));
   const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
@@ -209,6 +291,7 @@ function WorkspaceItem({ workspace }: { workspace: Workspace }) {
 
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(workspace.name);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
   const [threadRenameValue, setThreadRenameValue] = useState('');
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set());
@@ -262,111 +345,55 @@ function WorkspaceItem({ workspace }: { workspace: Workspace }) {
         <span className={'ws-chevron' + (expanded ? ' open' : '')}>
           <ChevronRight />
         </span>
-        <button
-          className="icon-btn ws-workspace-del"
-          aria-label="Delete workspace"
-          onClick={e => {
-            e.stopPropagation();
-            if (confirm(`Delete workspace "${workspace.name}"?`)) {
-              deleteWorkspace(workspace.id);
-            }
-          }}
-        >
-          <Icon.Trash />
-        </button>
+        {confirmingDelete ? (
+          <span className="ws-inline-confirm">
+            <button className="ws-confirm-yes" onClick={e => { e.stopPropagation(); deleteWorkspace(workspace.id); }}>Delete</button>
+            <button className="ws-confirm-cancel" onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }}>Cancel</button>
+          </span>
+        ) : (
+          <button
+            className="icon-btn ws-workspace-del"
+            aria-label="Delete workspace"
+            onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}
+          >
+            <Icon.Trash />
+          </button>
+        )}
       </div>
 
       {expanded && (
         <div className="ws-workspace-children">
-          {workspace.threads.map(t => {
-            const isActive = isActiveWs && activeThreadId === t.id;
-            const hasArtifacts = t.artifacts.length > 0;
-            const isThreadExpanded = expandedThreadIds.has(t.id);
-
-            return (
-              <div key={t.id} className="ws-thread-group">
-                <div
-                  className={'ws-thread-item' + (isActive ? ' active' : '')}
-                  onClick={() => {
-                    if (renamingThreadId === t.id) return;
-                    setActiveWorkspaceThread(workspace.id, t.id);
-                    if (hasArtifacts) toggleThreadExpanded(t.id);
-                  }}
-                >
-                  {hasArtifacts && (
-                    <span className={'ws-thread-chevron' + (isThreadExpanded ? ' open' : '')}>
-                      <ChevronRight />
-                    </span>
-                  )}
-                  <span className="ws-thread-glyph">{'◦'}</span>
-                  {renamingThreadId === t.id ? (
-                    <input
-                      className="rail-rename-input"
-                      value={threadRenameValue}
-                      autoFocus
-                      onClick={e => e.stopPropagation()}
-                      onChange={e => setThreadRenameValue(e.target.value)}
-                      onBlur={() => {
-                        if (threadRenameValue.trim()) {
-                          renameWorkspaceThread(workspace.id, t.id, threadRenameValue.trim());
-                        }
-                        setRenamingThreadId(null);
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          if (threadRenameValue.trim()) {
-                            renameWorkspaceThread(workspace.id, t.id, threadRenameValue.trim());
-                          }
-                          setRenamingThreadId(null);
-                        } else if (e.key === 'Escape') {
-                          setRenamingThreadId(null);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <span
-                      className="ws-thread-title"
-                      onDoubleClick={e => {
-                        e.stopPropagation();
-                        setRenamingThreadId(t.id);
-                        setThreadRenameValue(t.title);
-                      }}
-                    >{t.title}</span>
-                  )}
-                  {hasArtifacts && (
-                    <span className="ws-thread-meta">{t.artifacts.length}</span>
-                  )}
-                  <button
-                    className="icon-btn ws-thread-del"
-                    aria-label="Delete task"
-                    onClick={e => {
-                      e.stopPropagation();
-                      if (confirm(`Delete task "${t.title}"?`)) {
-                        deleteWorkspaceThread(workspace.id, t.id);
-                      }
-                    }}
-                  >
-                    <Icon.Trash />
-                  </button>
-                </div>
-
-                {hasArtifacts && isThreadExpanded && (
-                  <ArtifactList
-                    artifacts={t.artifacts}
-                    workspaceId={workspace.id}
-                    threadId={t.id}
-                    onOpen={openWorkspaceArtifact}
-                  />
-                )}
-              </div>
-            );
-          })}
+          {workspace.threads.map(t => (
+            <ThreadItem
+              key={t.id}
+              thread={t}
+              workspaceId={workspace.id}
+              isActive={isActiveWs && activeThreadId === t.id}
+              isExpanded={expandedThreadIds.has(t.id)}
+              renamingThreadId={renamingThreadId}
+              threadRenameValue={threadRenameValue}
+              onActivate={() => {
+                if (renamingThreadId === t.id) return;
+                setActiveWorkspaceThread(workspace.id, t.id);
+                if (t.artifacts.length > 0) toggleThreadExpanded(t.id);
+              }}
+              onStartRename={() => { setRenamingThreadId(t.id); setThreadRenameValue(t.title); }}
+              onRenameChange={setThreadRenameValue}
+              onRenameCommit={() => {
+                if (threadRenameValue.trim()) renameWorkspaceThread(workspace.id, t.id, threadRenameValue.trim());
+                setRenamingThreadId(null);
+              }}
+              onRenameCancel={() => setRenamingThreadId(null)}
+              onDelete={() => deleteWorkspaceThread(workspace.id, t.id)}
+              openArtifact={openWorkspaceArtifact}
+            />
+          ))}
 
           <button
             className="ws-thread-item ws-add-thread"
             onClick={() => newWorkspaceThread(workspace.id)}
           >
-            <span className="ws-thread-glyph">{'＋'}</span>
+            <span className="ws-thread-glyph"><Icon.Plus /></span>
             <span className="ws-thread-title">New task</span>
           </button>
 

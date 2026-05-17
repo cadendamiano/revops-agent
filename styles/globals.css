@@ -8,7 +8,7 @@
   --ink: #11161F;
   --ink-2: #3B4250;
   --ink-3: #6B7280;
-  --ink-4: #9CA3AF;
+  --ink-4: #767D8A;
   --ink-5: #C7C5BD;
   --line: #D9D8D2;
   --line-2: #E7E6E0;
@@ -57,8 +57,8 @@
   --fs-display-3:   26px;
   --fs-headline:    20px;
   --fs-title:       15px;
-  --fs-h1:          17px;
-  --fs-h2:          18px;
+  --fs-h1:          18px;
+  --fs-h2:          16px;
   --fs-h3:          15px;
   --fs-body:        13.5px;
   --fs-body-sm:     12.5px;
@@ -282,12 +282,12 @@ input, textarea, select{ font-family: inherit; color: inherit; }
   margin: 0 4px 4px;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 9px 10px;
-  background: var(--accent-deep); color: #fff;
+  background: var(--rule); color: var(--bg);
   border-radius: var(--radius-sm);
   font-family: var(--mono); font-size: 11.5px;
-  transition: background 0.12s;
+  transition: opacity 0.12s;
 }
-.new-session:hover{ background: oklch(0.34 0.10 195); }
+.new-session:hover{ opacity: 0.82; }
 .new-session .kbd{ background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); color: #fff; }
 
 .rail-mini{
@@ -439,14 +439,14 @@ input, textarea, select{ font-family: inherit; color: inherit; }
   border: 1px solid transparent;
   transition: all 0.12s ease;
 }
-.btn-primary{ background: var(--accent-deep); color: white; }
-.btn-primary:hover{ background: oklch(0.34 0.10 195); }
+.btn-primary{ background: var(--rule); color: var(--bg); }
+.btn-primary:hover{ opacity: 0.82; }
 .btn:disabled{ opacity: 0.5; cursor: not-allowed; }
 .btn-ghost{ background: transparent; color: var(--ink-2); border-color: var(--line); }
 .btn-ghost:hover{ background: var(--surface-2); }
 .btn-danger{ background: transparent; color: var(--danger); border-color: color-mix(in oklab, var(--danger) 30%, transparent); }
 .btn-danger:hover{ background: color-mix(in oklab, var(--danger) 8%, transparent); }
-.btn .kbd{ background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.18); color: rgba(255,255,255,0.9); }
+.btn .kbd{ background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.16); color: rgba(255,255,255,0.85); }
 .btn-ghost .kbd{ background: var(--surface); border-color: var(--line); color: var(--ink-3); }
 
 /* ─── inline artifact card (Claude-style) ─── */
@@ -767,14 +767,13 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 .composer-mode .dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .send-btn{
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 10px 6px 12px;
-  background: var(--accent-deep); color: #fff;
+  padding: 6px 10px;
+  background: var(--rule); color: var(--bg);
   border-radius: 6px;
   font-family: var(--mono); font-size: 11px;
   transition: background 0.12s;
 }
-.send-btn:hover{ background: oklch(0.34 0.10 195); }
-.send-btn .kbd{ background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.20); color: #fff; }
+.send-btn:hover{ background: color-mix(in oklab, var(--rule) 85%, var(--accent)); }
 
 /* ---------- Resize handles ---------- */
 .resize-handle{
@@ -2075,12 +2074,14 @@ body.fullscreen .settings-page-header{ padding-left: 28px; }
   color: var(--ink);
 }
 .ws-thread-glyph{
-  font-family: var(--mono);
-  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  width: 12px; flex: none;
   color: var(--ink-4);
-  width: 12px;
-  flex: none;
-  text-align: center;
+}
+.ws-thread-dot{
+  display: inline-block; width: 4px; height: 4px;
+  border-radius: 50%; background: currentColor;
+  opacity: 0.35; flex-shrink: 0;
 }
 .ws-thread-title{
   flex: 1;
@@ -2199,7 +2200,21 @@ body.fullscreen .settings-page-header{ padding-left: 28px; }
 
 .ws-thread-del{ opacity: 0; pointer-events: none; margin-left: auto; flex-shrink: 0; }
 .ws-thread-item:hover .ws-thread-del{ opacity: 1; pointer-events: auto; }
-.ws-thread-del:hover{ color: var(--red-text, #e55); }
+.ws-thread-del:hover{ color: var(--danger); }
+
+.ws-inline-confirm{ display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.ws-confirm-yes{
+  font-family: var(--mono); font-size: 10.5px; color: var(--danger);
+  padding: 1px 5px; border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in oklab, var(--danger) 35%, transparent);
+}
+.ws-confirm-yes:hover{ background: var(--danger-soft); }
+.ws-confirm-cancel{
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);
+  padding: 1px 5px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+.ws-confirm-cancel:hover{ background: var(--surface-2); }
 
 .ws-thread-chevron{
   display: flex; align-items: center; justify-content: center;
