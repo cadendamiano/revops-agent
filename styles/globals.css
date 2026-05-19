@@ -137,6 +137,7 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 /* ---------- Top bar ---------- */
 .topbar{
   grid-column: 1 / -1;
+  height: 44px;
   display: flex; align-items: center; gap: 12px;
   padding: 0 14px 0 76px;
   border-bottom: 1px solid var(--line);
@@ -144,47 +145,6 @@ input, textarea, select{ font-family: inherit; color: inherit; }
   -webkit-app-region: drag;
 }
 .topbar :where(button, a, input, select, textarea){ -webkit-app-region: no-drag; }
-
-.topbar-crumbs{
-  display: flex; align-items: center; gap: 8px;
-  min-width: 0;
-}
-.topbar-product{
-  font-family: var(--sans); font-weight: 600; font-size: 13px;
-  color: var(--ink); letter-spacing: 0;
-  white-space: nowrap;
-}
-.topbar-sep{
-  font-family: var(--sans); font-size: 13px; color: var(--ink-4);
-  user-select: none;
-}
-.topbar-chip{
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 26px; padding: 0 8px; border-radius: 6px;
-  background: var(--surface-2); color: var(--ink-2);
-  font-family: var(--sans); font-size: 11.5px;
-  white-space: nowrap;
-}
-.topbar-entity-dot{
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 22%, transparent);
-}
-.topbar-env{
-  display: inline-flex; align-items: center; justify-content: center;
-  height: 20px; padding: 0 8px; border-radius: 4px;
-  background: var(--surface-2); color: var(--ink-3);
-  font-family: var(--sans); font-weight: 500; font-size: 11px;
-  text-transform: lowercase; letter-spacing: 0;
-}
-.topbar-env.testing{
-  color: var(--warn);
-  background: var(--warn-soft);
-}
-
-.topbar-spacer{ flex: 1; }
-
-.topbar-meta{ font-family: var(--mono); font-size: 11px; color: var(--ink-3); display:flex; gap: 14px; align-items: center; -webkit-app-region: no-drag; }
 
 .kbd{ font-family: var(--mono); font-size: 10.5px; padding: 2px 5px; border:1px solid var(--line); border-bottom-width:2px; border-radius: 4px; color: var(--ink-2); background: var(--surface); -webkit-app-region: no-drag; }
 
