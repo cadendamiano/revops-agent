@@ -1941,306 +1941,100 @@ body.fullscreen .settings-page-header{ padding-left: 28px; }
 }
 
 /* ---------- Workspace panel ---------- */
-.ws-history-btn{
+/* ─── Session list (flat, time-bucketed) ──────────────────────────── */
+
+.ws-new-session{
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--ink);
+  font-size: 12.5px;
+  color: var(--ink-2);
   cursor: pointer;
   background: transparent;
+  border: none;
   text-align: left;
 }
-.ws-history-btn:hover{
+.ws-new-session:hover{
   background: color-mix(in oklab, var(--ink) 6%, transparent);
-}
-.ws-history-btn.ws-history-active{
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-.ws-history-icon{
-  display: inline-flex;
-  color: var(--ink-3);
-}
-.ws-history-back{
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--ink-4);
+  color: var(--ink);
 }
 
 .ws-section{
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
+  gap: 1px;
+  margin-top: 6px;
 }
-.ws-section-header{
-  display: flex;
-  align-items: center;
-  padding: 8px 6px 6px;
-}
-.ws-section-label{
+
+.ws-session-label{
   font-family: var(--mono);
   text-transform: uppercase;
   letter-spacing: var(--tr-caps-lg);
   font-size: var(--fs-mono-tiny);
   color: var(--ink-4);
-  flex: 1;
-}
-.ws-section-actions{
-  display: flex;
-  gap: 2px;
-}
-.ws-icon-btn{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  border: 1px solid var(--line);
-  color: var(--ink-2);
-  cursor: pointer;
-}
-.ws-icon-btn:hover{
-  background: color-mix(in oklab, var(--ink) 6%, transparent);
-  color: var(--ink);
+  padding: 6px 8px 3px;
 }
 
-.ws-workspace-group{
-  display: flex;
-  flex-direction: column;
-}
-
-.ws-workspace-item{
+.ws-session-row{
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--ink);
-  position: relative;
-}
-.ws-workspace-item:hover{
-  background: color-mix(in oklab, var(--ink) 6%, transparent);
-}
-.ws-workspace-group.active > .ws-workspace-item{
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-.ws-workspace-chip{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  font-size: 13px;
-  line-height: 1;
-  flex: none;
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink) 6%, transparent) inset;
-}
-.ws-workspace-name{
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 500;
-  letter-spacing: var(--tr-tight);
-}
-.ws-chevron{
-  display: inline-flex;
-  color: var(--ink-4);
-  transform: rotate(0deg);
-  transition: transform 140ms ease;
-}
-.ws-chevron.open{
-  transform: rotate(90deg);
-}
-.ws-workspace-del{
-  opacity: 0;
-  transition: opacity 120ms ease;
-  color: var(--ink-4);
-  padding: 2px;
-  position: absolute;
-  right: 22px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-.ws-workspace-item:hover .ws-workspace-del{
-  opacity: 1;
-}
-.ws-workspace-del:hover{
-  color: var(--danger);
-}
-
-.ws-workspace-children{
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 2px 0 6px 14px;
-  margin-left: 17px;
-  border-left: 1px dashed var(--line);
-}
-
-.ws-thread-item{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
-  color: var(--ink-2);
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  text-align: left;
-  width: 100%;
-}
-.ws-thread-item:hover{
-  background: color-mix(in oklab, var(--ink) 6%, transparent);
-}
-.ws-thread-item.active{
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  color: var(--ink);
-}
-.ws-thread-glyph{
-  display: flex; align-items: center; justify-content: center;
-  width: 12px; flex: none;
-  color: var(--ink-4);
-}
-.ws-thread-dot{
-  display: inline-block; width: 4px; height: 4px;
-  border-radius: 50%; background: currentColor;
-  opacity: 0.35; flex-shrink: 0;
-}
-.ws-thread-title{
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ws-thread-meta{
-  font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--ink-4);
-}
-.ws-add-thread{
-  color: var(--ink-4);
-  font-style: normal;
-}
-.ws-add-thread:hover{
-  color: var(--ink-2);
-}
-
-.ws-file-item{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  color: var(--ink-3);
-  font-family: var(--mono);
-}
-.ws-file-glyph{
-  display: inline-flex;
-  color: var(--ink-4);
-  width: 12px;
-  flex: none;
-  justify-content: center;
-}
-.ws-file-name{
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ws-add-ghost{
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 6px;
-  width: 100%;
-  padding: 8px 10px;
-  margin-top: 6px;
-  border: 1.5px dashed var(--accent-line);
+  padding: 5px 8px;
   border-radius: var(--radius-sm);
-  background: var(--accent-soft);
-  color: var(--accent-deep);
-  font-family: var(--mono);
-  font-size: 11.5px;
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-}
-.ws-add-ghost:hover{
-  color: var(--accent-deep);
-  border-color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 8%, transparent);
-}
-
-.ws-creating .rail-rename-input{
-  flex: 1;
-}
-
-.ws-history-item{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 8px;
-  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--ink-2);
   cursor: pointer;
 }
-.ws-history-item:hover{
+.ws-session-row:hover{
   background: color-mix(in oklab, var(--ink) 6%, transparent);
 }
-.ws-history-chip{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  font-size: 12px;
-  flex: none;
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink) 6%, transparent) inset;
-}
-.ws-history-body{
-  min-width: 0;
-  flex: 1;
-}
-.ws-history-title{
-  font-size: 12.5px;
+.ws-session-row.active{
+  background: var(--surface);
+  box-shadow: var(--shadow);
   color: var(--ink);
+}
+.ws-session-title{
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 500;
 }
-.ws-history-meta{
-  font-family: var(--mono);
-  font-size: 10.5px;
+
+.ws-session-actions{
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ws-pin-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
   color: var(--ink-4);
-  margin-top: 2px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
 }
+.ws-session-row:hover .ws-pin-btn{ opacity: 1; }
+.ws-pin-btn:hover{ color: var(--ink); }
+.ws-pin-btn.pinned{ opacity: 1; color: var(--accent); }
 
-.ws-thread-group{ display: flex; flex-direction: column; }
-
-.ws-thread-del{ opacity: 0; pointer-events: none; margin-left: auto; flex-shrink: 0; }
-.ws-thread-item:hover .ws-thread-del{ opacity: 1; pointer-events: auto; }
-.ws-thread-del:hover{ color: var(--danger); }
+.ws-session-del{
+  opacity: 0;
+  pointer-events: none;
+  flex-shrink: 0;
+  color: var(--ink-4);
+}
+.ws-session-row:hover .ws-session-del{ opacity: 1; pointer-events: auto; }
+.ws-session-del:hover{ color: var(--danger); }
 
 .ws-inline-confirm{ display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
 .ws-confirm-yes{
@@ -2255,35 +2049,6 @@ body.fullscreen .settings-page-header{ padding-left: 28px; }
   border: 1px solid var(--line);
 }
 .ws-confirm-cancel:hover{ background: var(--surface-2); }
-
-.ws-thread-chevron{
-  display: flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; flex-shrink: 0;
-  transition: transform 120ms ease;
-  color: var(--ink-4);
-}
-.ws-thread-chevron.open{ transform: rotate(90deg); }
-
-.ws-artifact-list{ display: flex; flex-direction: column; }
-
-.ws-artifact-group-label{
-  padding: 2px 8px 2px 44px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ink-4);
-}
-
-.ws-artifact-item{
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 8px 4px 44px;
-  font-size: 12px;
-  color: var(--ink-3);
-  cursor: pointer;
-  border-radius: 4px;
-}
-.ws-artifact-item:hover{ background: var(--surface-2); color: var(--ink-1); }
-.ws-artifact-item.active{ background: var(--surface-2); color: var(--ink-1); }
 
 /* ─── Dev Config Panel (⌘K secret overlay) ─────────────────────────── */
 

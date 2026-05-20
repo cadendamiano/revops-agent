@@ -86,6 +86,7 @@ export type Thread = {
   artifacts: Artifact[];
   approvalStates: Record<string, ApprovalState>;
   approvalPayloads: Record<string, ApprovalPayload>;
+  pinned?: boolean;
   /** User's preferred artifact kind for the next submit, set via the composer modality picker.
    *  Only consulted in testing mode; demo mode runs scripted flows. Undefined = Auto. */
   desiredArtifactKind?: ArtifactKind;
@@ -148,6 +149,8 @@ type State = {
   renameWorkspace: (id: string, name: string) => void;
   toggleWorkspaceExpanded: (id: string) => void;
   newWorkspaceThread: (workspaceId: string, title?: string) => string;
+  newSession: (title?: string) => string;
+  toggleThreadPinned: (workspaceId: string, threadId: string) => void;
   setActiveWorkspaceThread: (workspaceId: string, threadId: string) => void;
   addTurnToActiveWorkspaceThread: (t: Turn) => void;
   updateTurnInActiveWorkspaceThread: (id: string, patch: Partial<Turn>) => void;
@@ -372,6 +375,47 @@ export const useStore = create<State>()(
         });
         return threadId;
       },
+
+      newSession: (title) => {
+        const thread = createThread(title);
+        set(s => {
+          const workspaces = s.workspaces.length > 0
+            ? s.workspaces
+            : [{
+                id: `ws_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+                name: 'Sessions',
+                icon: '📁',
+                color: 'oklch(0.78 0.06 195)',
+                createdAt: Date.now(),
+                threads: [],
+                files: [],
+              } as Workspace];
+          const targetId = workspaces[0].id;
+          return {
+            workspaces: workspaces.map(w =>
+              w.id === targetId ? { ...w, threads: [...w.threads, thread] } : w
+            ),
+            activeWorkspaceId: targetId,
+            activeWorkspaceThreadId: thread.id,
+            activeArtifact: null,
+          };
+        });
+        return thread.id;
+      },
+
+      toggleThreadPinned: (workspaceId, threadId) =>
+        set(s => ({
+          workspaces: s.workspaces.map(w =>
+            w.id === workspaceId
+              ? {
+                  ...w,
+                  threads: w.threads.map(t =>
+                    t.id === threadId ? { ...t, pinned: !t.pinned } : t
+                  ),
+                }
+              : w
+          ),
+        })),
 
       setActiveWorkspaceThread: (workspaceId, threadId) =>
         set({
@@ -606,7 +650,7 @@ export const useStore = create<State>()(
     {
       name: 'bcw:state',
       storage: createJSONStorage(() => localStorage),
-      version: 9,
+      version: 10,
       migrate: (persisted: any, fromVersion: number) => {
         if (persisted && fromVersion < 2) {
           persisted.tweaks = { ...DEFAULT_TWEAKS, ...(persisted.tweaks ?? {}) };
@@ -660,6 +704,13 @@ export const useStore = create<State>()(
               delete t.selectedBills;
               delete t.billEnvId;
               delete t.billProduct;
+            }
+          }
+        }
+        if (persisted && fromVersion < 10) {
+          for (const w of persisted.workspaces ?? []) {
+            for (const t of w.threads ?? []) {
+              t.pinned = t.pinned ?? false;
             }
           }
         }
