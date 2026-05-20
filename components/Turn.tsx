@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useState } from 'react';
-import { ToolRow } from './primitives/ToolRow';
+import { ToolChip } from './primitives/ToolRow';
 import { ApprovalCard } from './primitives/ApprovalCard';
 import { DataTable } from './primitives/DataTable';
 import { Icon } from './primitives/Icon';
@@ -10,7 +10,7 @@ import { ArtifactThumb } from './ArtifactThumb';
 import type { Turn as TurnType } from '@/lib/turns';
 import type { ApprovalState } from '@/lib/store';
 import { useStore } from '@/lib/store';
-import type { ArtifactKind } from '@/lib/flows';
+import type { ArtifactKind, ToolRowSpec } from '@/lib/flows';
 
 const ARTIFACT_KIND_LABEL: Record<ArtifactKind, string> = {
   'spreadsheet': 'Spreadsheet',
@@ -76,19 +76,7 @@ function TurnInner({
     return (
       <div className="msg agent fade-in">
         <div className="msg-body">
-          <div className="tool-call">
-            {turn.rows.map((r, i) => <ToolRow key={`${r.verb}:${r.path}:${i}`} row={r} />)}
-            {turn.pending != null && turn.pending > 0 && (
-              <div className="tool-row" style={{ color: 'var(--ink-4)' }}>
-                <span className="glyph"><Icon.Spinner /></span>
-                <span className="endpoint"><span className="path">resolving…</span></span>
-                <span className="result">{turn.pending} pending</span>
-              </div>
-            )}
-          </div>
-          <div className="tool-summary">
-            {turn.rows.length} tool call{turn.rows.length === 1 ? '' : 's'} · all succeeded
-          </div>
+          <ToolSteps rows={turn.rows} pending={turn.pending ?? 0} />
         </div>
       </div>
     );
@@ -264,6 +252,49 @@ function TurnInner({
 }
 
 export const Turn = memo(TurnInner);
+
+function ToolSteps({ rows, pending }: { rows: ToolRowSpec[]; pending: number }) {
+  const running = pending > 0 || rows.some(r => !r.status || r.status === '…' || r.status === 'running');
+  const [open, setOpen] = useState(false);
+  const expanded = open || running;
+
+  if (rows.length <= 1 && pending <= 0) {
+    return (
+      <div className="tool-steps">
+        <div className="tool-steps-list">
+          {rows.map((r, i) => <ToolChip key={`${r.tool ?? r.path}:${i}`} row={r} />)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tool-steps">
+      <button
+        type="button"
+        className="tool-steps-header"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={expanded}
+      >
+        <span className="icon">{running ? <Icon.Spinner /> : <Icon.Check />}</span>
+        <span className="label">{running ? 'Working…' : `Worked on ${rows.length} steps`}</span>
+        <span className={`tool-steps-chev${expanded ? ' open' : ''}`}><Icon.Arrow /></span>
+      </button>
+      {expanded && (
+        <div className="tool-steps-list">
+          {rows.map((r, i) => <ToolChip key={`${r.tool ?? r.path}:${i}`} row={r} />)}
+          {pending > 0 && (
+            <div className="tool-chip running">
+              <span className="icon"><Icon.Spinner /></span>
+              <span className="label">Resolving…</span>
+              <span className="result">{pending} pending</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type ArtifactOfferProps = {
   turn: Extract<TurnType, { kind: 'artifact-offer' }>;

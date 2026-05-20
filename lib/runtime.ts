@@ -1,6 +1,6 @@
 'use client';
 
-import { FLOWS, LOGISTICS_FLOWS, type ArtifactKind, type Flow, type FlowStep } from './flows';
+import { FLOWS, LOGISTICS_FLOWS, type ArtifactKind, type Flow, type FlowStep, type ToolRowSpec } from './flows';
 import { newId, type Turn } from './turns';
 import { useStore, getActiveWorkspaceThread, type ApprovalPayload } from './store';
 import type { FlagInput } from './memory/types';
@@ -426,7 +426,11 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
   s.addTurnToActiveWorkspaceThread({ id: agentId, kind: 'agent', text: '', streaming: true });
 
   let acc = '';
-  const toolTurnIds: Record<string, string> = {};
+  // Consecutive tool calls within one response accumulate into a single `tools`
+  // turn so the UI can collapse them into one "Worked on N steps" group.
+  let toolsTurnId: string | null = null;
+  let toolRows: ToolRowSpec[] = [];
+  const toolRowIndex: Record<string, number> = {};
 
   // RAF-throttle for streaming text updates: caps store mutations at the display
   // refresh rate so a fast-streaming model doesn't overwhelm React reconciliation.
@@ -502,26 +506,36 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
           pendingText = acc;
           scheduleText();
         } else if (ev.type === 'tool-call') {
-          const tid = newId('tl');
-          toolTurnIds[ev.id] = tid;
-          useStore.getState().addTurnToActiveWorkspaceThread({
-            id: tid,
-            kind: 'tools',
-            rows: [{ verb: 'EXEC', path: toolLabel(ev.name), filter: JSON.stringify(ev.input), status: '…', result: 'running' }],
-            pending: 0,
-          });
+          const row: ToolRowSpec = {
+            verb: 'EXEC',
+            path: toolLabel(ev.name),
+            filter: JSON.stringify(ev.input),
+            status: '…',
+            result: 'running',
+            tool: ev.name,
+          };
+          if (toolsTurnId == null) {
+            toolsTurnId = newId('tl');
+            toolRows = [row];
+            toolRowIndex[ev.id] = 0;
+            useStore.getState().addTurnToActiveWorkspaceThread({
+              id: toolsTurnId,
+              kind: 'tools',
+              rows: toolRows,
+              pending: 0,
+            });
+          } else {
+            toolRowIndex[ev.id] = toolRows.length;
+            toolRows = [...toolRows, row];
+            useStore.getState().updateTurnInActiveWorkspaceThread(toolsTurnId, { rows: toolRows } as Partial<Turn>);
+          }
         } else if (ev.type === 'tool-result') {
-          const tid = toolTurnIds[ev.id];
-          if (tid) {
-            useStore.getState().updateTurnInActiveWorkspaceThread(tid, {
-              rows: [{
-                verb: 'EXEC',
-                path: toolLabel(ev.name),
-                filter: JSON.stringify(ev.input),
-                status: ev.ok ? 'ok' : 'err',
-                result: ev.summary,
-              }],
-            } as Partial<Turn>);
+          const idx = toolRowIndex[ev.id];
+          if (toolsTurnId && idx != null) {
+            toolRows = toolRows.map((r, i) =>
+              i === idx ? { ...r, status: ev.ok ? 'ok' : 'err', result: ev.summary } : r,
+            );
+            useStore.getState().updateTurnInActiveWorkspaceThread(toolsTurnId, { rows: toolRows } as Partial<Turn>);
           }
           // Inline data-table: append a separate turn so the user sees the rows
           // directly under the tool row, without the model needing to re-list them.
@@ -556,17 +570,12 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
             }
           }
         } else if (ev.type === 'tool-error') {
-          const tid = toolTurnIds[ev.id];
-          if (tid) {
-            useStore.getState().updateTurnInActiveWorkspaceThread(tid, {
-              rows: [{
-                verb: 'EXEC',
-                path: toolLabel(ev.name),
-                filter: JSON.stringify(ev.input),
-                status: 'err',
-                result: ev.summary,
-              }],
-            } as Partial<Turn>);
+          const idx = toolRowIndex[ev.id];
+          if (toolsTurnId && idx != null) {
+            toolRows = toolRows.map((r, i) =>
+              i === idx ? { ...r, status: 'err', result: ev.summary } : r,
+            );
+            useStore.getState().updateTurnInActiveWorkspaceThread(toolsTurnId, { rows: toolRows } as Partial<Turn>);
           }
         } else if (ev.type === 'artifact') {
           const artId = ev.kind === 'custom-dashboard'

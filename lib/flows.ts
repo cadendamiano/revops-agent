@@ -25,6 +25,8 @@ export type ToolRowSpec = {
   filter?: string;
   status?: string;
   result?: string;
+  /** Raw tool name (e.g. sf_data_query) for presentation mapping; set for live calls. */
+  tool?: string;
 };
 
 export type ApprovalStake =
