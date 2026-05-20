@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, getActiveWorkspaceThread } from '@/lib/store';
 import { handleApprove, handleReject, handleFormAnswer, runFlow, runLLM } from '@/lib/runtime';
 import { resolveComposerSubmit } from '@/lib/resolveComposerSubmit';
-import { SESSION_FLOW_MAP } from '@/lib/data';
+import { SESSION_FLOW_MAP, TASK_TEMPLATES } from '@/lib/data';
 import { TopBar } from '@/components/TopBar';
 import { Rail } from '@/components/Rail';
 import { Composer } from '@/components/Composer';
@@ -120,6 +120,21 @@ export default function Page() {
                 >
                   Run starter flow
                 </button>
+              </div>
+            </div>
+          )}
+          {activeWsThread && turns.length === 0 && mode === 'testing' && !starterFlowId && (
+            <div className="testing-empty">
+              <div>
+                <div className="glyph" style={{ fontSize: 42, color: 'var(--ink-4)' }}>◦</div>
+                <div style={{ marginTop: 10 }}>Start a task session — pick a template or type a prompt.</div>
+                <div className="task-templates">
+                  {TASK_TEMPLATES.map(t => (
+                    <button key={t.label} className="composer-chip" onClick={() => runLLM(t.prompt)}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

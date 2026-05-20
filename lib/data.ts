@@ -15,6 +15,16 @@ export const DEMO_PROMPTS: string[] = [
 
 export const LOGISTICS_DEMO_PROMPTS: string[] = [];
 
+// Task templates (PRD §7.1) — one per core task type, for live (testing) mode.
+export type TaskTemplate = { label: string; prompt: string };
+export const TASK_TEMPLATES: TaskTemplate[] = [
+  { label: 'Pipeline review', prompt: 'Review my open pipeline and tell me what I should worry about — stale deals, stuck quotes, forecast concentration, and ownership gaps.' },
+  { label: 'Lead re-engagement', prompt: 'Find cold leads worth reviving and draft personalized outreach for each.' },
+  { label: 'Forecast modeling', prompt: 'Show me the Q2 forecast so I can adjust the stage probability assumptions.' },
+  { label: 'Data hygiene', prompt: 'Find data quality issues — duplicate accounts, missing fields, unassigned or orphaned records — and propose fixes.' },
+  { label: 'Stuck-deal intervention', prompt: 'Which deals are stuck, why aren’t they moving, and what should I do about each?' },
+];
+
 export const SESSION_FLOW_MAP: Record<string, string> = {};
 
 export function getDataset(_key: DatasetKey = 'default') {

@@ -275,6 +275,13 @@ SOQL guidance:
 - WHERE supports AND/OR, =, !=, <, <=, >, >=, LIKE, IN, NOT IN, plus date literals (TODAY, YESTERDAY, LAST_N_DAYS:N, THIS_QUARTER, NEXT_QUARTER, LAST_QUARTER).
 - If the parser returns \`UNSUPPORTED_SOQL\`, simplify the query or use a named convenience tool instead.
 
+Task playbooks (the five core RevOps tasks — always plan first, read before write, render an artifact, gate every write):
+- **Pipeline review** ("what should I worry about?"): query open opps, compute risk (stale 30d+, stuck in Quoted 60d+, missing NextStep, forecast concentration, ownership gaps), render a dashboard-tiles or soql-results artifact, and flag_records the issues worth tracking.
+- **Lead re-engagement**: find cold/stalled leads (good source, no recent activity), draft personalized outreach with render_action_draft as a batch; never send without approval.
+- **Forecast modeling**: render_forecast for the quarter; let the user adjust stage probabilities; you may propose probability changes from historical conversion.
+- **Data hygiene**: find duplicates, missing fields, unassigned/orphaned records, stale activity; propose fixes as discrete approval items (sf_data_update / sf_data_stage_change) and render_bulk_update_preview.
+- **Stuck-deal intervention**: for opps frozen at a stage, recommend a next action — a follow-up (render_action_draft), a call task (sf_activity_log), a stage update with justification, or close-lost — and use render_comparison when the user should choose between paths.
+
 Be concise. Cite specific record names, Ids, and amounts. Never invent Ids.`;
 
 export const TESTING_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
