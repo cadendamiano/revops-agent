@@ -12,6 +12,25 @@ import { SlashMenu } from './SlashMenu';
 
 const SLASH_PREFIX_RE = /^\/([a-z0-9-]*)$/i;
 
+function ExecModeToggle() {
+  const execMode = useStore(s => s.execMode);
+  const setExecMode = useStore(s => s.setExecMode);
+  const isAuto = execMode === 'auto';
+  return (
+    <button
+      type="button"
+      className={'exec-toggle' + (isAuto ? ' is-auto' : '')}
+      onClick={() => setExecMode(isAuto ? 'plan' : 'auto')}
+      title={isAuto
+        ? 'Auto mode: approved batches run without a per-item click (dual-control still prompts). Click to switch to Plan.'
+        : 'Plan mode: every write waits for your approval. Click to switch to Auto.'}
+    >
+      <span className="exec-toggle-dot" />
+      {isAuto ? 'Auto' : 'Plan'}
+    </button>
+  );
+}
+
 export function Composer() {
   const composer = useStore(s => s.composer);
   const setComposer = useStore(s => s.setComposer);
@@ -218,6 +237,7 @@ export function Composer() {
           style={{ opacity: streaming ? 0.55 : 1 }}
         />
         <div className="composer-actions">
+          <ExecModeToggle />
           <div className="composer-spacer" />
           <ModelPicker />
           <button className="send-btn" onClick={onSubmit} disabled={streaming}>

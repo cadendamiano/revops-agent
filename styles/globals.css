@@ -720,6 +720,22 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 .modality-chip:disabled{ opacity: 0.5; cursor: not-allowed; }
 
 .composer-spacer{ flex: 1; }
+.exec-toggle{
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--ink-3); cursor: pointer; background: var(--surface);
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.exec-toggle:hover{ color: var(--ink); border-color: var(--ink-4); }
+.exec-toggle .exec-toggle-dot{
+  width: 6px; height: 6px; border-radius: 50%; background: var(--pos);
+}
+.exec-toggle.is-auto{
+  color: var(--warn); border-color: var(--warn);
+  background: color-mix(in oklab, var(--warn) 12%, var(--surface));
+}
+.exec-toggle.is-auto .exec-toggle-dot{ background: var(--warn); }
 .composer-mode{
   font-family: var(--mono); font-size: 10.5px; color: var(--ink-4);
   display: flex; align-items: center; gap: 6px;

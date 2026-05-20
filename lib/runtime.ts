@@ -547,6 +547,14 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
             payload,
             simulated: ev.simulated === true,
           });
+          // Auto mode (PRD §7.2): pre-authorize non-mass-action batches without a
+          // per-item click. Dual-control (mass-action) always still prompts.
+          const st = useStore.getState();
+          const gated = (payload as { stake?: string }).stake === 'mass-action'
+            || (payload as { requiresSecondApprover?: boolean }).requiresSecondApprover === true;
+          if (st.execMode === 'auto' && !gated) {
+            void handleApprove(payload.batchId);
+          }
         } else if (ev.type === 'form-question') {
           cancelPendingText();
           useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: acc, streaming: false });

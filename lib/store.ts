@@ -17,6 +17,9 @@ import {
 } from './models';
 
 export type Mode = 'demo' | 'testing';
+// Per-session execution mode (PRD §7.2). Plan = approve every gated action;
+// Auto = pre-authorize non-mass-action batches (dual-control still prompts).
+export type ExecMode = 'plan' | 'auto';
 export type WorkspaceView = 'workspaces' | 'history';
 
 export type WorkspaceFile = {
@@ -126,6 +129,9 @@ type State = {
   setActiveArtifact: (id: string | null) => void;
 
   setMode: (m: Mode) => void;
+
+  execMode: ExecMode;
+  setExecMode: (m: ExecMode) => void;
 
   flaggedMemory: FlaggedRecord[];
   flagRecords: (recs: FlagInput[]) => void;
@@ -246,6 +252,9 @@ export const useStore = create<State>()(
 
       setMode: (mode) =>
         set({ mode, streaming: false, composer: '', activeArtifact: null }),
+
+      execMode: 'plan',
+      setExecMode: (execMode) => set({ execMode }),
 
       flaggedMemory: [],
       flagRecords: (recs) => set(s => ({ flaggedMemory: mergeFlags(s.flaggedMemory, recs) })),
@@ -673,6 +682,7 @@ export const useStore = create<State>()(
         expandedWorkspaceIds: s.expandedWorkspaceIds,
         shortcuts: s.shortcuts,
         flaggedMemory: s.flaggedMemory,
+        execMode: s.execMode,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
@@ -690,6 +700,7 @@ export const useStore = create<State>()(
         state.workspaceView = state.workspaceView ?? 'workspaces';
         state.shortcuts = state.shortcuts ?? [];
         state.flaggedMemory = state.flaggedMemory ?? [];
+        state.execMode = state.execMode ?? 'plan';
       },
     }
   )
