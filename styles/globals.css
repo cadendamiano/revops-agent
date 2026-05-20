@@ -313,56 +313,46 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 .msg.agent .msg-body strong{ font-weight: 600; }
 .msg.agent .msg-body code{ font-family: var(--mono); font-size: var(--fs-mono-md); padding: 1px 5px; background: var(--surface-2); border-radius: 4px; border: 1px solid var(--line); }
 
-/* tool-call rows — disclosure of the BILL API the agent invoked */
-.tool-call{
+/* tool-call steps — concise, human-readable disclosure of what the agent did */
+.tool-steps{
   margin-top: 4px;
-  display: flex; flex-direction: column; gap: 0;
-  border-left: 1px solid var(--line);
-  padding-left: 12px;
+  display: flex; flex-direction: column; gap: 6px;
 }
-.tool-row{
-  display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center;
-  font-family: var(--mono); font-size: 11.5px; color: var(--ink-2);
-  padding: 4px 0;
+.tool-steps-header{
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+  font-family: var(--sans); font-size: 13px; color: var(--ink-2);
+  background: none; border: none; padding: 2px 0; cursor: pointer;
 }
-.tool-row .glyph{ color: var(--accent-deep); }
-.tool-row .endpoint{ color: var(--ink); }
-.tool-row .endpoint .verb{ color: var(--accent-deep); margin-right: 6px; }
-.tool-row .endpoint .path{ color: var(--ink-2); }
-.tool-row .endpoint .filter{ color: var(--ink-4); }
-.tool-row .result{ color: var(--ink-3); font-size: 11px; }
-.tool-row .result .ok{ color: var(--pos); }
-.tool-row.expand{ cursor: pointer; }
-.tool-row.expand:hover .endpoint{ color: var(--accent-deep); }
-
-.tool-row-wrap.collapsible .endpoint{
-  display: block; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.tool-row-wrap.open .tool-row .filter{ display: none; }
-.tool-row-chev{
+.tool-steps-header:hover{ color: var(--ink); }
+.tool-steps-header .icon{ display: inline-flex; color: var(--accent-deep); }
+.tool-steps-header .label{ font-weight: 500; }
+.tool-steps-chev{
   display: inline-flex; align-items: center; color: var(--ink-4);
-  transform: rotate(0deg); transition: transform 140ms ease;
+  transform: rotate(90deg); transition: transform 140ms ease;
 }
-.tool-row-chev.open{ transform: rotate(90deg); }
-.tool-row-detail{
-  margin: 4px 0 6px 22px;
-  font-family: var(--mono); font-size: 11px; line-height: 1.5;
-  color: var(--ink-2);
+.tool-steps-chev.open{ transform: rotate(-90deg); }
+
+.tool-steps-list{
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tool-chip{
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+  max-width: 100%;
+  font-family: var(--sans); font-size: 12.5px; color: var(--ink);
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  white-space: pre;
-  overflow-x: auto;
-  max-height: 360px;
-  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  padding: 5px 10px;
 }
-
-.tool-summary{
-  margin-top: 6px;
-  font-family: var(--mono); font-size: 11px; color: var(--ink-4);
+.tool-chip .icon{ display: inline-flex; flex: none; color: var(--accent-deep); }
+.tool-chip .label{ white-space: nowrap; }
+.tool-chip .result{
+  color: var(--ink-4); font-size: 11.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.tool-chip.running .icon{ color: var(--ink-4); }
+.tool-chip.err{ border-color: var(--danger); }
+.tool-chip.err .icon{ color: var(--danger); }
 
 /* approval block — payment gate */
 .approval{
