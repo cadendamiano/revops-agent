@@ -3,8 +3,8 @@ import '../styles/globals.css';
 import { FullScreenSync } from '../components/FullScreenSync';
 
 export const metadata: Metadata = {
-  title: 'Salesforce Coworker',
-  description: 'An AI prototype harness.',
+  title: 'RevOps Agent — Beacon Plumbing',
+  description: 'An agent-first RevOps harness over a mock CRM.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

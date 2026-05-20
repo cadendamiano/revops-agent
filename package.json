@@ -75,8 +75,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.salesforce.coworker",
-    "productName": "Salesforce Coworker",
+    "appId": "com.beacon.revops",
+    "productName": "RevOps Agent",
     "directories": {
       "output": "dist-electron",
       "buildResources": "electron/assets"
