@@ -1,468 +1,171 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useStore, type Workspace, type Artifact } from '@/lib/store';
+import { useStore } from '@/lib/store';
 import { Icon } from './primitives/Icon';
 
-const Clock = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-    <circle cx="7" cy="7" r="5.4" stroke="currentColor" strokeWidth="1.2" />
-    <path d="M7 4v3l2 1.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-  </svg>
-);
-
-const Filter = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-    <path d="M2 3h8M3.5 6h5M5 9h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-  </svg>
-);
-
-const FolderPlus = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path d="M1.5 3.5h3l1 1h6v6.5h-10V3.5z" stroke="var(--accent)" strokeWidth="1.1" strokeLinejoin="round" />
-    <path d="M6.5 7v2.5M5.25 8.25h2.5" stroke="var(--accent)" strokeWidth="1.1" strokeLinecap="round" />
-  </svg>
-);
-
-const ChevronRight = () => (
-  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-    <path d="M3.5 2.5l3 2.5-3 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const Folder = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+const Pin = ({ filled }: { filled?: boolean }) => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill={filled ? 'currentColor' : 'none'}>
     <path
-      d="M1.6 4.2c0-.55.45-1 1-1H5.4l1.1 1.1H11.4c.55 0 1 .45 1 1v5.5c0 .55-.45 1-1 1H2.6c-.55 0-1-.45-1-1V4.2z"
-      stroke="var(--accent)"
-      strokeWidth="1.2"
+      d="M4.2 1.5h3.6l-.5 3 1.7 1.5v1H3v-1l1.7-1.5-.5-3z"
+      stroke="currentColor"
+      strokeWidth="1.1"
       strokeLinejoin="round"
-      fill="none"
     />
+    <path d="M6 7v3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
   </svg>
 );
 
-export function WorkspaceRailBody() {
-  const view = useStore(s => s.workspaceView);
-  const setView = useStore(s => s.setWorkspaceView);
-
-  return (
-    <>
-      {view === 'history' ? <WorkspaceHistory onBack={() => setView('workspaces')} /> : <WorkspaceList />}
-    </>
-  );
-}
-
-function WorkspaceList() {
-  const workspaces = useStore(s => s.workspaces);
-  const setView = useStore(s => s.setWorkspaceView);
-  const newWorkspace = useStore(s => s.newWorkspace);
-  const [creating, setCreating] = useState(false);
-  const [draftName, setDraftName] = useState('');
-
-  const commitNew = () => {
-    const name = draftName.trim();
-    if (name) newWorkspace(name);
-    setCreating(false);
-    setDraftName('');
-  };
-
-  return (
-    <>
-      <button className="ws-history-btn" onClick={() => setView('history')}>
-        <span className="ws-history-icon"><Clock /></span>
-        <span>History</span>
-      </button>
-
-      <div className="ws-section">
-        <div className="ws-section-header">
-          <span className="ws-section-label">Workbooks</span>
-          <div className="ws-section-actions">
-            <button className="ws-icon-btn" aria-label="Filter workspaces" title="Filter">
-              <Filter />
-            </button>
-            <button
-              className="ws-icon-btn"
-              aria-label="New workbook"
-              title="New workbook"
-              onClick={() => setCreating(true)}
-            >
-              <FolderPlus />
-            </button>
-          </div>
-        </div>
-
-        {workspaces.map(w => (
-          <WorkspaceItem key={w.id} workspace={w} />
-        ))}
-
-        {creating && (
-          <div className="ws-workspace-item ws-creating">
-            <span className="ws-workspace-chip" style={{ background: 'oklch(0.92 0.04 195)' }}>
-              <Folder />
-            </span>
-            <input
-              className="rail-rename-input"
-              autoFocus
-              value={draftName}
-              placeholder="Workspace name"
-              onChange={e => setDraftName(e.target.value)}
-              onBlur={commitNew}
-              onKeyDown={e => {
-                if (e.key === 'Enter') commitNew();
-                else if (e.key === 'Escape') {
-                  setCreating(false);
-                  setDraftName('');
-                }
-              }}
-            />
-          </div>
-        )}
-
-        {!creating && (
-          <button className="ws-add-ghost" onClick={() => setCreating(true)}>
-            <Icon.Plus />
-            <span>New workbook</span>
-          </button>
-        )}
-      </div>
-    </>
-  );
-}
-
-const KIND_LABELS: Record<string, string> = {
-  'ap-table': 'Tables',
-  'spend-chart': 'Charts',
-  'custom-dashboard': 'Dashboards',
-  'document': 'Documents',
-  'liquidity-burndown': 'Burndowns',
-  'rule-net15': 'Rules',
-  'automation': 'Automations',
-  'sweep-rule': 'Rules',
-  'crm-flow': 'Flows',
-};
-
-function kindIcon(kind: string): React.ReactNode {
-  if (kind === 'spend-chart' || kind === 'liquidity-burndown') return <Icon.Chart />;
-  if (kind === 'custom-dashboard') return <Icon.Chart />;
-  if (kind === 'document') return <Icon.Doc />;
-  if (kind === 'ap-table') return <Icon.Table />;
-  if (kind === 'rule-net15' || kind === 'sweep-rule') return <Icon.Rule />;
-  if (kind === 'automation' || kind === 'crm-flow') return <Icon.Flow />;
-  return <Icon.Gear />;
-}
-
-function ArtifactList({
-  artifacts,
-  workspaceId,
-  threadId,
-  onOpen,
-}: {
-  artifacts: Artifact[];
+type SessionEntry = {
   workspaceId: string;
   threadId: string;
-  onOpen: (workspaceId: string, threadId: string, artifactId: string) => void;
-}) {
-  const activeArtifact = useStore(s => s.activeArtifact);
-  const grouped = new Map<string, Artifact[]>();
-  for (const a of artifacts) {
-    const label = KIND_LABELS[a.kind] ?? 'Other';
-    const list = grouped.get(label);
-    if (list) list.push(a);
-    else grouped.set(label, [a]);
+  title: string;
+  createdAt: number;
+  pinned: boolean;
+};
+
+const DAY = 86_400_000;
+
+function bucketLabel(createdAt: number, now: number): string {
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  if (createdAt >= startOfToday.getTime()) return 'Today';
+  const age = now - createdAt;
+  if (age < 7 * DAY) return 'Previous 7 days';
+  if (age < 30 * DAY) return 'Previous 30 days';
+  return 'Older';
+}
+
+const TIME_ORDER = ['Today', 'Previous 7 days', 'Previous 30 days', 'Older'];
+
+export function WorkspaceRailBody() {
+  return <SessionList />;
+}
+
+function SessionList() {
+  const workspaces = useStore(s => s.workspaces);
+  const newSession = useStore(s => s.newSession);
+
+  const entries: SessionEntry[] = workspaces.flatMap(w =>
+    w.threads.map(t => ({
+      workspaceId: w.id,
+      threadId: t.id,
+      title: t.title,
+      createdAt: t.createdAt,
+      pinned: !!t.pinned,
+    }))
+  );
+
+  const now = Date.now();
+  const pinned = entries.filter(e => e.pinned).sort((a, b) => b.createdAt - a.createdAt);
+
+  const timeBuckets = new Map<string, SessionEntry[]>();
+  for (const e of entries) {
+    if (e.pinned) continue;
+    const label = bucketLabel(e.createdAt, now);
+    const list = timeBuckets.get(label);
+    if (list) list.push(e);
+    else timeBuckets.set(label, [e]);
+  }
+
+  const sections: { label: string; items: SessionEntry[] }[] = [];
+  if (pinned.length) sections.push({ label: 'Pinned', items: pinned });
+  for (const label of TIME_ORDER) {
+    const items = timeBuckets.get(label);
+    if (items && items.length) {
+      sections.push({ label, items: items.sort((a, b) => b.createdAt - a.createdAt) });
+    }
   }
 
   return (
-    <div className="ws-artifact-list">
-      {[...grouped.entries()].map(([groupLabel, items]) => (
-        <div key={groupLabel}>
-          <div className="ws-artifact-group-label">{groupLabel}</div>
-          {items.map(a => (
-            <div
-              key={a.id}
-              className={'ws-artifact-item' + (activeArtifact === a.id ? ' active' : '')}
-              onClick={e => {
-                e.stopPropagation();
-                onOpen(workspaceId, threadId, a.id);
-              }}
-            >
-              <span>{kindIcon(a.kind)}</span>
-              <span>{a.label}</span>
-            </div>
+    <>
+      <button className="ws-new-session" onClick={() => newSession()}>
+        <Icon.Plus />
+        <span>New session</span>
+      </button>
+
+      {sections.length === 0 && <div className="rail-empty">No sessions yet.</div>}
+
+      {sections.map(section => (
+        <div key={section.label} className="ws-section">
+          <div className="ws-session-label">{section.label}</div>
+          {section.items.map(e => (
+            <SessionRow key={e.threadId} entry={e} />
           ))}
         </div>
       ))}
-    </div>
+    </>
   );
 }
 
-type Thread = Workspace['threads'][number];
-
-function ThreadItem({
-  thread: t, workspaceId, isActive, isExpanded,
-  renamingThreadId, threadRenameValue,
-  onActivate, onStartRename, onRenameChange, onRenameCommit, onRenameCancel,
-  onDelete, openArtifact,
-}: {
-  thread: Thread; workspaceId: string; isActive: boolean; isExpanded: boolean;
-  renamingThreadId: string | null; threadRenameValue: string;
-  onActivate: () => void;
-  onStartRename: () => void; onRenameChange: (v: string) => void;
-  onRenameCommit: () => void; onRenameCancel: () => void;
-  onDelete: () => void;
-  openArtifact: (workspaceId: string, threadId: string, artifactId: string) => void;
-}) {
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const hasArtifacts = t.artifacts.length > 0;
-
-  return (
-    <div className="ws-thread-group">
-      <div
-        className={'ws-thread-item' + (isActive ? ' active' : '')}
-        onClick={onActivate}
-      >
-        {hasArtifacts && (
-          <span className={'ws-thread-chevron' + (isExpanded ? ' open' : '')}>
-            <ChevronRight />
-          </span>
-        )}
-        <span className="ws-thread-glyph"><span className="ws-thread-dot" /></span>
-        {renamingThreadId === t.id ? (
-          <input
-            className="rail-rename-input"
-            value={threadRenameValue}
-            autoFocus
-            onClick={e => e.stopPropagation()}
-            onChange={e => onRenameChange(e.target.value)}
-            onBlur={onRenameCommit}
-            onKeyDown={e => {
-              if (e.key === 'Enter') onRenameCommit();
-              else if (e.key === 'Escape') onRenameCancel();
-            }}
-          />
-        ) : (
-          <span
-            className="ws-thread-title"
-            onDoubleClick={e => { e.stopPropagation(); onStartRename(); }}
-          >{t.title}</span>
-        )}
-        {hasArtifacts && (
-          <span className="ws-thread-meta">{t.artifacts.length}</span>
-        )}
-        {confirmingDelete ? (
-          <span className="ws-inline-confirm">
-            <button className="ws-confirm-yes" onClick={e => { e.stopPropagation(); onDelete(); }}>Delete</button>
-            <button className="ws-confirm-cancel" onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }}>Cancel</button>
-          </span>
-        ) : (
-          <button
-            className="icon-btn ws-thread-del"
-            aria-label="Delete task"
-            onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}
-          >
-            <Icon.Trash />
-          </button>
-        )}
-      </div>
-      {hasArtifacts && isExpanded && (
-        <ArtifactList
-          artifacts={t.artifacts}
-          workspaceId={workspaceId}
-          threadId={t.id}
-          onOpen={openArtifact}
-        />
-      )}
-    </div>
-  );
-}
-
-function WorkspaceItem({ workspace }: { workspace: Workspace }) {
-  const expanded = useStore(s => s.expandedWorkspaceIds.includes(workspace.id));
+function SessionRow({ entry }: { entry: SessionEntry }) {
   const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
   const activeThreadId = useStore(s => s.activeWorkspaceThreadId);
-  const toggleExpanded = useStore(s => s.toggleWorkspaceExpanded);
-  const renameWorkspace = useStore(s => s.renameWorkspace);
-  const deleteWorkspace = useStore(s => s.deleteWorkspace);
-  const newWorkspaceThread = useStore(s => s.newWorkspaceThread);
   const setActiveWorkspaceThread = useStore(s => s.setActiveWorkspaceThread);
-  const deleteWorkspaceThread = useStore(s => s.deleteWorkspaceThread);
   const renameWorkspaceThread = useStore(s => s.renameWorkspaceThread);
-  const openWorkspaceArtifact = useStore(s => s.openWorkspaceArtifact);
+  const deleteWorkspaceThread = useStore(s => s.deleteWorkspaceThread);
+  const toggleThreadPinned = useStore(s => s.toggleThreadPinned);
 
   const [renaming, setRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState(workspace.name);
+  const [renameValue, setRenameValue] = useState(entry.title);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
-  const [threadRenameValue, setThreadRenameValue] = useState('');
-  const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set());
 
-  const toggleThreadExpanded = (id: string) =>
-    setExpandedThreadIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const isActive = activeWorkspaceId === entry.workspaceId && activeThreadId === entry.threadId;
 
-  const isActiveWs = activeWorkspaceId === workspace.id;
+  const commitRename = () => {
+    if (renameValue.trim()) renameWorkspaceThread(entry.workspaceId, entry.threadId, renameValue.trim());
+    setRenaming(false);
+  };
 
   return (
-    <div className={'ws-workspace-group' + (isActiveWs ? ' active' : '')}>
-      <div
-        className="ws-workspace-item"
-        onClick={() => !renaming && toggleExpanded(workspace.id)}
-        onDoubleClick={e => {
-          e.stopPropagation();
-          setRenaming(true);
-          setRenameValue(workspace.name);
-        }}
-      >
-        <span className="ws-workspace-chip" style={{ background: workspace.color }}>
-          <Folder />
+    <div
+      className={'ws-session-row' + (isActive ? ' active' : '')}
+      onClick={() => { if (!renaming) setActiveWorkspaceThread(entry.workspaceId, entry.threadId); }}
+    >
+      {renaming ? (
+        <input
+          className="rail-rename-input"
+          value={renameValue}
+          autoFocus
+          onClick={e => e.stopPropagation()}
+          onChange={e => setRenameValue(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commitRename();
+            else if (e.key === 'Escape') setRenaming(false);
+          }}
+        />
+      ) : (
+        <span
+          className="ws-session-title"
+          onDoubleClick={e => { e.stopPropagation(); setRenameValue(entry.title); setRenaming(true); }}
+        >{entry.title}</span>
+      )}
+
+      {!renaming && (confirmingDelete ? (
+        <span className="ws-inline-confirm">
+          <button className="ws-confirm-yes" onClick={e => { e.stopPropagation(); deleteWorkspaceThread(entry.workspaceId, entry.threadId); }}>Delete</button>
+          <button className="ws-confirm-cancel" onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }}>Cancel</button>
         </span>
-        {renaming ? (
-          <input
-            className="rail-rename-input"
-            value={renameValue}
-            autoFocus
-            onClick={e => e.stopPropagation()}
-            onChange={e => setRenameValue(e.target.value)}
-            onBlur={() => {
-              renameWorkspace(workspace.id, renameValue);
-              setRenaming(false);
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                renameWorkspace(workspace.id, renameValue);
-                setRenaming(false);
-              } else if (e.key === 'Escape') {
-                setRenaming(false);
-              }
-            }}
-          />
-        ) : (
-          <span className="ws-workspace-name">{workspace.name}</span>
-        )}
-        <span className={'ws-chevron' + (expanded ? ' open' : '')}>
-          <ChevronRight />
-        </span>
-        {confirmingDelete ? (
-          <span className="ws-inline-confirm">
-            <button className="ws-confirm-yes" onClick={e => { e.stopPropagation(); deleteWorkspace(workspace.id); }}>Delete</button>
-            <button className="ws-confirm-cancel" onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }}>Cancel</button>
-          </span>
-        ) : (
+      ) : (
+        <span className="ws-session-actions">
           <button
-            className="icon-btn ws-workspace-del"
-            aria-label="Delete workspace"
+            className={'ws-pin-btn' + (entry.pinned ? ' pinned' : '')}
+            aria-label={entry.pinned ? 'Unpin session' : 'Pin session'}
+            title={entry.pinned ? 'Unpin' : 'Pin'}
+            onClick={e => { e.stopPropagation(); toggleThreadPinned(entry.workspaceId, entry.threadId); }}
+          >
+            <Pin filled={entry.pinned} />
+          </button>
+          <button
+            className="icon-btn ws-session-del"
+            aria-label="Delete session"
             onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}
           >
             <Icon.Trash />
           </button>
-        )}
-      </div>
-
-      {expanded && (
-        <div className="ws-workspace-children">
-          {workspace.threads.map(t => (
-            <ThreadItem
-              key={t.id}
-              thread={t}
-              workspaceId={workspace.id}
-              isActive={isActiveWs && activeThreadId === t.id}
-              isExpanded={expandedThreadIds.has(t.id)}
-              renamingThreadId={renamingThreadId}
-              threadRenameValue={threadRenameValue}
-              onActivate={() => {
-                if (renamingThreadId === t.id) return;
-                setActiveWorkspaceThread(workspace.id, t.id);
-                if (t.artifacts.length > 0) toggleThreadExpanded(t.id);
-              }}
-              onStartRename={() => { setRenamingThreadId(t.id); setThreadRenameValue(t.title); }}
-              onRenameChange={setThreadRenameValue}
-              onRenameCommit={() => {
-                if (threadRenameValue.trim()) renameWorkspaceThread(workspace.id, t.id, threadRenameValue.trim());
-                setRenamingThreadId(null);
-              }}
-              onRenameCancel={() => setRenamingThreadId(null)}
-              onDelete={() => deleteWorkspaceThread(workspace.id, t.id)}
-              openArtifact={openWorkspaceArtifact}
-            />
-          ))}
-
-          <button
-            className="ws-thread-item ws-add-thread"
-            onClick={() => newWorkspaceThread(workspace.id)}
-          >
-            <span className="ws-thread-glyph"><Icon.Plus /></span>
-            <span className="ws-thread-title">New task</span>
-          </button>
-
-          {workspace.files.map(f => (
-            <div key={f.id} className="ws-file-item">
-              <span className="ws-file-glyph"><Icon.Doc /></span>
-              <span className="ws-file-name">{f.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
+        </span>
+      ))}
     </div>
-  );
-}
-
-function WorkspaceHistory({ onBack }: { onBack: () => void }) {
-  const workspaces = useStore(s => s.workspaces);
-  const setActiveWorkspaceThread = useStore(s => s.setActiveWorkspaceThread);
-
-  const items = workspaces
-    .flatMap(w =>
-      w.threads.map(t => ({
-        workspaceId: w.id,
-        workspaceName: w.name,
-        workspaceIcon: w.icon,
-        workspaceColor: w.color,
-        threadId: t.id,
-        title: t.title,
-        createdAt: t.createdAt,
-        turnCount: t.turns.length,
-      }))
-    )
-    .sort((a, b) => b.createdAt - a.createdAt);
-
-  return (
-    <>
-      <button className="ws-history-btn ws-history-active" onClick={onBack}>
-        <span className="ws-history-icon"><Clock /></span>
-        <span>History</span>
-        <span className="ws-history-back">← Workspaces</span>
-      </button>
-
-      <div className="ws-section">
-        <div className="ws-section-header">
-          <span className="ws-section-label">Recent tasks</span>
-        </div>
-
-        {items.length === 0 && (
-          <div className="rail-empty">No tasks yet.</div>
-        )}
-
-        {items.map(item => (
-          <div
-            key={item.threadId}
-            className="ws-history-item"
-            onClick={() => setActiveWorkspaceThread(item.workspaceId, item.threadId)}
-          >
-            <span className="ws-history-chip" style={{ background: item.workspaceColor }}>
-              <Folder />
-            </span>
-            <div className="ws-history-body">
-              <div className="ws-history-title">{item.title}</div>
-              <div className="ws-history-meta">
-                {item.workspaceName} · {item.turnCount} turn{item.turnCount === 1 ? '' : 's'}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
   );
 }

@@ -31,18 +31,48 @@ export function getDataset(_key: DatasetKey = 'default') {
   return { users: USERS, accounts: ACCOUNTS, opportunities: OPPORTUNITIES, leads: LEADS };
 }
 
+const DAY = 86_400_000;
+
 export const SEED_WORKSPACES: Workspace[] = [
   {
-    id: 'ws_pipeops',
-    name: 'Pipeline Ops',
+    id: 'ws_sessions',
+    name: 'Sessions',
     icon: '◎',
     color: 'oklch(0.78 0.06 250)',
-    createdAt: Date.parse('2026-05-01T00:00:00Z'),
+    createdAt: Date.now() - 40 * DAY,
     threads: [
       {
-        id: 'thr_pipeops_seed',
+        id: 'thr_seed_today',
         title: 'Q2 pipeline check-in',
-        createdAt: Date.parse('2026-05-01T00:00:00Z'),
+        createdAt: Date.now(),
+        turns: [],
+        artifacts: [],
+        approvalStates: {},
+        approvalPayloads: {},
+        pinned: true,
+      },
+      {
+        id: 'thr_seed_week',
+        title: 'Cold lead re-engagement',
+        createdAt: Date.now() - 3 * DAY,
+        turns: [],
+        artifacts: [],
+        approvalStates: {},
+        approvalPayloads: {},
+      },
+      {
+        id: 'thr_seed_month',
+        title: 'Forecast assumptions review',
+        createdAt: Date.now() - 12 * DAY,
+        turns: [],
+        artifacts: [],
+        approvalStates: {},
+        approvalPayloads: {},
+      },
+      {
+        id: 'thr_seed_older',
+        title: 'Data hygiene sweep',
+        createdAt: Date.now() - 45 * DAY,
         turns: [],
         artifacts: [],
         approvalStates: {},

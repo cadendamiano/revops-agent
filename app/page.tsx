@@ -23,7 +23,7 @@ export default function Page() {
   const setComposer = useStore(s => s.setComposer);
   const accentHue = useStore(s => s.tweaks.accentHue);
   const darkMode = useStore(s => s.tweaks.darkMode);
-  const newWorkspaceThread = useStore(s => s.newWorkspaceThread);
+  const newSession = useStore(s => s.newSession);
   const streaming = useStore(s => s.streaming);
 
   const handleChipSubmit = useCallback((body: string) => {
@@ -75,12 +75,12 @@ export default function Page() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault();
-        if (activeWorkspaceId) newWorkspaceThread(activeWorkspaceId);
+        newSession();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [newWorkspaceThread, activeWorkspaceId]);
+  }, [newSession]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
