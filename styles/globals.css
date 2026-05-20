@@ -798,6 +798,20 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 .cmp-tradeoffs{ margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 3px; }
 .cmp-col .btn{ margin-top: auto; }
 
+/* ---------- Interactive forecast sliders ---------- */
+.fc-sliders{
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface);
+}
+.fc-sliders-head{
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.fc-slider-row{ display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; font-size: 12.5px; }
+.fc-slider-row input[type="range"]{ width: 100%; accent-color: var(--accent); }
+.fc-slider-val{ text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.fc-slider-actions{ display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
 /* ---------- Resize handles ---------- */
 .resize-handle{
   cursor: col-resize;
