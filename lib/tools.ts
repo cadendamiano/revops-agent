@@ -31,6 +31,7 @@ import {
   handleRenderLeadScoring, handleRenderForecast, handleRenderDashboardTiles,
   handleRenderCaseSla, handleRenderActivityTimeline, handleRenderBulkUpdatePreview,
 } from './tools/sfdc/render';
+import { handleFlagRecords } from './tools/sfdc/memory';
 
 export type ToolDef = {
   name: string;
@@ -195,6 +196,12 @@ HANDLERS.set('render_automation_artifact',  echoRender('automation'));
 HANDLERS.set('ask_question',    async (input) => ok('acknowledged', { name: 'ask_question', ...input }));
 HANDLERS.set('offer_artifacts', async (input) => ok('acknowledged', { name: 'offer_artifacts', ...input }));
 
+// Flagged-record memory (persisted client-side from the tool-result input).
+HANDLERS.set('flag_records', async (input) => {
+  const r = await handleFlagRecords(input);
+  return ok(`Flagged ${r.flagged} record${r.flagged === 1 ? '' : 's'}`, r);
+});
+
 async function dispatch(name: string, input: any): Promise<RunResult> {
   const h = HANDLERS.get(name);
   if (!h) return { ok: false, summary: `unknown tool: ${name}`, data: { name } };
@@ -237,6 +244,7 @@ Tool groups (each group's tools share a common prefix):
 - **sf_approval** — \`sf_approval_queue\` (pending discount approvals) and \`sf_approval_decide\` (stage approve/reject).
 - **Render** — open an artifact card for the user: \`render_soql_results\`, \`render_pipeline_kanban\`, \`render_account_360\`, \`render_lead_scoring\`, \`render_forecast\`, \`render_dashboard_tiles\`, \`render_case_sla\`, \`render_activity_timeline\`, \`render_bulk_update_preview\`. Generic artifacts (\`render_spreadsheet_artifact\`, \`render_document_artifact\`, \`render_slides_artifact\`, \`render_html_artifact\`) are available for ad-hoc visualizations.
 - **Chat affordances** — \`ask_question\` for clarification, \`offer_artifacts\` for suggesting renders.
+- **Memory** — \`flag_records\` records the records you've flagged (risk/opportunity/stale/duplicate/hygiene) so they persist across sessions. Call it once per finding-set. If FLAGGED-RECORD MEMORY appears below, do NOT re-surface records the user dismissed/ignored unless their state has clearly changed.
 
 Workflow (SOQL-first read, then propose→render→approve for writes):
 1. **Read first.** Open with \`sf_data_query\` or a named convenience read (\`sf_case_sla_breach\`, \`sf_analytics_run_report\`, etc.). Summarize what you found in 1–3 sentences citing counts, names, and amounts.

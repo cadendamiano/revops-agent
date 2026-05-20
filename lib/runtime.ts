@@ -3,6 +3,7 @@
 import { FLOWS, LOGISTICS_FLOWS, type ArtifactKind, type Flow, type FlowStep } from './flows';
 import { newId, type Turn } from './turns';
 import { useStore, getActiveWorkspaceThread, type ApprovalPayload } from './store';
+import type { FlagInput } from './memory/types';
 import { MODEL_TOOLS, INTERNAL_TOOLS } from './tools';
 
 const ALL_TOOLS = [...MODEL_TOOLS, ...INTERNAL_TOOLS];
@@ -425,6 +426,7 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
         model: s.tweaks.modelId,
         userMessage: userText,
         history,
+        memory: s.flaggedMemory,
         ...(s.mode === 'testing' ? { mode: 'testing' } : {}),
         ...(opts ? {
           forcedKind: opts.forcedKind,
@@ -487,6 +489,13 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
               rows: ev.data,
               truncated: ev.dataTruncated === true,
             });
+          }
+          // Flagged-record memory: persist the records the agent flagged.
+          if (ev.ok && ev.name === 'flag_records') {
+            const recs = (ev as { input?: { records?: FlagInput[] } }).input?.records;
+            if (Array.isArray(recs) && recs.length > 0) {
+              useStore.getState().flagRecords(recs);
+            }
           }
         } else if (ev.type === 'tool-error') {
           const tid = toolTurnIds[ev.id];

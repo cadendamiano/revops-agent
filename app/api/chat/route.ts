@@ -3,6 +3,7 @@ import type { DatasetKey } from '@/lib/data';
 import type { ArtifactKind } from '@/lib/flows';
 import { sseEncode, type Event, type ChatHistoryTurn } from '@/lib/chatRouteHelpers';
 import { runAgentOnce } from '@/lib/agent/runAgentOnce';
+import type { FlaggedRecord } from '@/lib/memory/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
     shortcutAllowedTools?: string[];
     shortcutSystemPrompt?: string;
     history?: ChatHistoryTurn[];
+    memory?: FlaggedRecord[];
   };
 
   const encoder = new TextEncoder();

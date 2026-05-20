@@ -6,6 +6,7 @@ import { SF_CASE_TOOLS } from './sfdc/case';
 import { SF_ACTIVITY_TOOLS } from './sfdc/activity';
 import { SF_APPROVAL_TOOLS } from './sfdc/approval';
 import { SFDC_RENDER_TOOLS_V2 } from './sfdc/render';
+import { SF_MEMORY_TOOLS } from './sfdc/memory';
 import {
   askQuestion, offerArtifacts,
   renderArtifact, renderHtmlArtifact, renderSpreadsheetArtifact,
@@ -37,6 +38,7 @@ export const FORM_TOOLS_V2: DefinedTool[] = [
   renderDocumentArtifact, renderSlidesArtifact, renderAutomationArtifact,
   askQuestion,
   offerArtifacts,
+  ...SF_MEMORY_TOOLS,
 ];
 
 export const DEFINED_MODEL_TOOLS: DefinedTool[] = [
