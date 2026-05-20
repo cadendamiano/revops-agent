@@ -32,6 +32,7 @@ import {
   handleRenderCaseSla, handleRenderActivityTimeline, handleRenderBulkUpdatePreview,
 } from './tools/sfdc/render';
 import { handleFlagRecords } from './tools/sfdc/memory';
+import { handlePlan } from './tools/sfdc/session';
 
 export type ToolDef = {
   name: string;
@@ -202,6 +203,12 @@ HANDLERS.set('flag_records', async (input) => {
   return ok(`Flagged ${r.flagged} record${r.flagged === 1 ? '' : 's'}`, r);
 });
 
+// Structured session plan (rendered as a checkpoint turn from the tool input).
+HANDLERS.set('plan', async (input) => {
+  const r = await handlePlan(input);
+  return ok(`Planned ${r.steps} step${r.steps === 1 ? '' : 's'}`, r);
+});
+
 async function dispatch(name: string, input: any): Promise<RunResult> {
   const h = HANDLERS.get(name);
   if (!h) return { ok: false, summary: `unknown tool: ${name}`, data: { name } };
@@ -247,6 +254,7 @@ Tool groups (each group's tools share a common prefix):
 - **Memory** — \`flag_records\` records the records you've flagged (risk/opportunity/stale/duplicate/hygiene) so they persist across sessions. Call it once per finding-set. If FLAGGED-RECORD MEMORY appears below, do NOT re-surface records the user dismissed/ignored unless their state has clearly changed.
 
 Workflow (SOQL-first read, then propose→render→approve for writes):
+0. **Plan first.** For any multi-step task, call \`plan\` once with an ordered list of steps before you start executing, so the user can see your intended path.
 1. **Read first.** Open with \`sf_data_query\` or a named convenience read (\`sf_case_sla_breach\`, \`sf_analytics_run_report\`, etc.). Summarize what you found in 1–3 sentences citing counts, names, and amounts.
 2. **Render** the appropriate artifact for the result so the user can see it.
 3. **Propose** changes by calling a stage tool (\`sf_data_update\`, \`sf_data_stage_change\`, \`sf_data_delete\`, \`sf_activity_log\`, \`sf_approval_decide\`). Each returns \`batchId\`, \`stake\`, \`recordCount\`.

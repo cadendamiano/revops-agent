@@ -418,10 +418,12 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
     rafHandle = null;
   };
 
+  currentAbort = new AbortController();
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
+      signal: currentAbort.signal,
       body: JSON.stringify({
         model: s.tweaks.modelId,
         userMessage: userText,
@@ -495,6 +497,15 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
             const recs = (ev as { input?: { records?: FlagInput[] } }).input?.records;
             if (Array.isArray(recs) && recs.length > 0) {
               useStore.getState().flagRecords(recs);
+            }
+          }
+          // Structured plan: render a checkpoint turn at the top of the work.
+          if (ev.ok && ev.name === 'plan') {
+            const inp = (ev as { input?: { goal?: string; steps?: { title: string; detail?: string }[] } }).input;
+            if (inp && Array.isArray(inp.steps) && inp.steps.length > 0) {
+              useStore.getState().addTurnToActiveWorkspaceThread({
+                id: newId('pl'), kind: 'plan', goal: inp.goal, steps: inp.steps,
+              });
             }
           }
         } else if (ev.type === 'tool-error') {
@@ -598,12 +609,29 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
     }
   } catch (e: any) {
     cancelPendingText();
-    useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
-      text: `_Couldn't reach the model. ${e?.message ?? 'unknown error'}. Set ANTHROPIC_API_KEY / GEMINI_API_KEY in .env.local and restart._`,
-      streaming: false,
-    });
+    if (e?.name === 'AbortError') {
+      // User terminated the session (PRD §7.13). Persist what we have.
+      useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
+        text: (acc ? acc + '\n\n' : '') + '_Session stopped by user._',
+        streaming: false,
+      });
+    } else {
+      useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
+        text: `_Couldn't reach the model. ${e?.message ?? 'unknown error'}. Set ANTHROPIC_API_KEY / GEMINI_API_KEY in .env.local and restart._`,
+        streaming: false,
+      });
+    }
   } finally {
     cancelPendingText();
+    currentAbort = null;
     useStore.getState().setStreaming(false);
   }
+}
+
+// Active request controller so the user can terminate a running session.
+let currentAbort: AbortController | null = null;
+
+/** Terminate the in-flight session (PRD §7.13). */
+export function stopLLM() {
+  currentAbort?.abort();
 }

@@ -750,6 +750,23 @@ input, textarea, select{ font-family: inherit; color: inherit; }
   transition: background 0.12s;
 }
 .send-btn:hover{ background: color-mix(in oklab, var(--rule) 85%, var(--accent)); }
+.send-btn.stop-btn{ background: var(--danger); }
+.send-btn.stop-btn:hover{ background: color-mix(in oklab, var(--danger) 85%, #000); }
+
+/* ---------- Session plan (checkpoint) ---------- */
+.plan-card{
+  border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius-lg); background: var(--surface);
+  padding: 10px 14px; margin: 2px 0;
+}
+.plan-head{
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em;
+  color: var(--ink-3); text-transform: uppercase; margin-bottom: 6px;
+}
+.plan-goal{ color: var(--ink-4); text-transform: none; letter-spacing: 0; }
+.plan-steps{ margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.plan-step{ font-size: 13px; color: var(--ink); }
+.plan-step-detail{ display: block; font-size: 12px; color: var(--ink-3); }
 
 /* ---------- Resize handles ---------- */
 .resize-handle{

@@ -24,6 +24,12 @@ export type Turn =
   | { id: string; kind: 'suggest'; items: string[] }
   | {
       id: string;
+      kind: 'plan';
+      goal?: string;
+      steps: { title: string; detail?: string }[];
+    }
+  | {
+      id: string;
       kind: 'data-table';
       toolName: string;
       rows: any[];

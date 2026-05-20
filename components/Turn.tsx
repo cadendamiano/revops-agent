@@ -232,6 +232,24 @@ function TurnInner({
     );
   }
 
+  if (turn.kind === 'plan') {
+    return (
+      <div className="msg agent fade-in">
+        <div className="plan-card">
+          <div className="plan-head">PLAN{turn.goal ? <span className="plan-goal"> — {turn.goal}</span> : null}</div>
+          <ol className="plan-steps">
+            {turn.steps.map((s, i) => (
+              <li key={i} className="plan-step">
+                <span className="plan-step-title">{s.title}</span>
+                {s.detail ? <span className="plan-step-detail">{s.detail}</span> : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    );
+  }
+
   if (turn.kind === 'form-question') {
     return <FormQuestion turn={turn} onFormAnswer={onFormAnswer} />;
   }

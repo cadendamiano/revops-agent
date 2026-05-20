@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useStore, getActiveWorkspaceThread } from '@/lib/store';
-import { runFlow, runLLM } from '@/lib/runtime';
+import { runFlow, runLLM, stopLLM } from '@/lib/runtime';
 import { ModelPicker } from './ModelPicker';
 import { ModalityPicker } from './ModalityPicker';
 import { matchSlashPrefixWithShortcuts, parseSlashWithShortcuts } from '@/lib/slashCommands';
@@ -240,9 +240,15 @@ export function Composer() {
           <ExecModeToggle />
           <div className="composer-spacer" />
           <ModelPicker />
-          <button className="send-btn" onClick={onSubmit} disabled={streaming}>
-            ↵
-          </button>
+          {streaming ? (
+            <button className="send-btn stop-btn" onClick={() => stopLLM()} title="Stop the session">
+              ◼ Stop
+            </button>
+          ) : (
+            <button className="send-btn" onClick={onSubmit}>
+              ↵
+            </button>
+          )}
         </div>
       </div>
     </div>
