@@ -26,6 +26,8 @@ const ARTIFACT_KIND_LABEL: Record<ArtifactKind, string> = {
   'case-sla': 'Case SLA',
   'activity-timeline': 'Activity timeline',
   'bulk-update-preview': 'Bulk update preview',
+  'action-draft': 'Action drafts',
+  'comparison': 'Comparison',
 };
 
 type Props = {

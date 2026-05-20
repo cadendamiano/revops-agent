@@ -15,7 +15,9 @@ export type ArtifactKind =
   | 'dashboard-tiles'
   | 'case-sla'
   | 'activity-timeline'
-  | 'bulk-update-preview';
+  | 'bulk-update-preview'
+  | 'action-draft'
+  | 'comparison';
 
 export type ToolRowSpec = {
   verb: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'EXEC';

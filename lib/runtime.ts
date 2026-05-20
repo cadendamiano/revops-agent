@@ -11,6 +11,48 @@ function toolLabel(name: string): string {
   return ALL_TOOLS.find(t => t.name === name)?.label ?? name;
 }
 
+// SFDC render tools → artifact kind. Lets live (testing-mode) tool calls open
+// the rich artifacts, matching what scripted demo flows produce.
+const SFDC_RENDER_KIND: Record<string, ArtifactKind> = {
+  render_soql_results: 'soql-results',
+  render_pipeline_kanban: 'pipeline-kanban',
+  render_account_360: 'account-360',
+  render_lead_scoring: 'lead-scoring',
+  render_forecast: 'forecast',
+  render_dashboard_tiles: 'dashboard-tiles',
+  render_case_sla: 'case-sla',
+  render_activity_timeline: 'activity-timeline',
+  render_bulk_update_preview: 'bulk-update-preview',
+  render_action_draft: 'action-draft',
+  render_comparison: 'comparison',
+};
+
+function createSfdcRenderArtifact(kind: ArtifactKind, input: Record<string, unknown>) {
+  const { artifactId: _omit, title, ...rest } = input;
+  const artId = `art_${kind.replace(/-/g, '_')}`;
+  const heading = typeof title === 'string' ? title : kind.replace(/-/g, ' ');
+  const artifact = {
+    id: artId,
+    kind,
+    label: heading,
+    status: 'draft' as const,
+    version: 1,
+    createdBy: 'RevOps Agent',
+    title: heading,
+    dataJson: JSON.stringify(rest),
+  };
+  const cardTurn: Turn = {
+    id: newId('ac'),
+    kind: 'artifact-card',
+    artifactId: artId,
+    title: heading,
+    sub: 'GENERATED',
+    meta: '',
+    icon: '◫',
+  };
+  useStore.getState().createArtifactFromEvent(artId, artifact, cardTurn);
+}
+
 type HistoryTurn = { role: 'user' | 'assistant'; text: string };
 
 function formatErrorText(message: string): string {
@@ -498,6 +540,11 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
             if (Array.isArray(recs) && recs.length > 0) {
               useStore.getState().flagRecords(recs);
             }
+          }
+          // SFDC render tools (testing mode): open the rich artifact inline.
+          if (ev.ok && SFDC_RENDER_KIND[ev.name]) {
+            const inp = (ev as { input?: Record<string, unknown> }).input;
+            if (inp) createSfdcRenderArtifact(SFDC_RENDER_KIND[ev.name], inp);
           }
           // Structured plan: render a checkpoint turn at the top of the work.
           if (ev.ok && ev.name === 'plan') {

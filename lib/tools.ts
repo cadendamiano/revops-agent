@@ -30,6 +30,7 @@ import {
   handleRenderSoqlResults, handleRenderPipelineKanban, handleRenderAccount360,
   handleRenderLeadScoring, handleRenderForecast, handleRenderDashboardTiles,
   handleRenderCaseSla, handleRenderActivityTimeline, handleRenderBulkUpdatePreview,
+  handleRenderActionDraft, handleRenderComparison,
 } from './tools/sfdc/render';
 import { handleFlagRecords } from './tools/sfdc/memory';
 import { handlePlan } from './tools/sfdc/session';
@@ -183,6 +184,8 @@ HANDLERS.set('render_dashboard_tiles',   async (input) => ok('Dashboard rendered
 HANDLERS.set('render_case_sla',          async (input) => ok('Case SLA rendered',        await handleRenderCaseSla(input)));
 HANDLERS.set('render_activity_timeline', async (input) => ok('Timeline rendered',         await handleRenderActivityTimeline(input)));
 HANDLERS.set('render_bulk_update_preview', async (input) => ok('Preview rendered',       await handleRenderBulkUpdatePreview(input)));
+HANDLERS.set('render_action_draft',        async (input) => ok('Drafts rendered',        await handleRenderActionDraft(input)));
+HANDLERS.set('render_comparison',          async (input) => ok('Comparison rendered',    await handleRenderComparison(input)));
 
 // Generic render tools (handled by the runtime as artifact events; we just echo).
 const echoRender = (kind: string): Handler => async (input) => ok(`${kind} rendered`, { kind, ...input });
@@ -249,7 +252,7 @@ Tool groups (each group's tools share a common prefix):
 - **sf_case** — \`sf_case_list\` (filter by status/priority/account) and \`sf_case_sla_breach\` (cases past or near SLA).
 - **sf_activity** — \`sf_activity_list\` (timeline for an Opp/Account/Case) and \`sf_activity_log\` (stage a new Call/Email/Meeting/Note).
 - **sf_approval** — \`sf_approval_queue\` (pending discount approvals) and \`sf_approval_decide\` (stage approve/reject).
-- **Render** — open an artifact card for the user: \`render_soql_results\`, \`render_pipeline_kanban\`, \`render_account_360\`, \`render_lead_scoring\`, \`render_forecast\`, \`render_dashboard_tiles\`, \`render_case_sla\`, \`render_activity_timeline\`, \`render_bulk_update_preview\`. Generic artifacts (\`render_spreadsheet_artifact\`, \`render_document_artifact\`, \`render_slides_artifact\`, \`render_html_artifact\`) are available for ad-hoc visualizations.
+- **Render** — open an artifact card for the user: \`render_soql_results\`, \`render_pipeline_kanban\`, \`render_account_360\`, \`render_lead_scoring\`, \`render_forecast\`, \`render_dashboard_tiles\`, \`render_case_sla\`, \`render_activity_timeline\`, \`render_bulk_update_preview\`, \`render_action_draft\` (editable email/SMS/call/note drafts — use for lead re-engagement and stuck-deal follow-ups; write the full body, the user edits then approves), \`render_comparison\` (side-by-side options the user picks from). Generic artifacts (\`render_spreadsheet_artifact\`, \`render_document_artifact\`, \`render_slides_artifact\`, \`render_html_artifact\`) are available for ad-hoc visualizations.
 - **Chat affordances** — \`ask_question\` for clarification, \`offer_artifacts\` for suggesting renders.
 - **Memory** — \`flag_records\` records the records you've flagged (risk/opportunity/stale/duplicate/hygiene) so they persist across sessions. Call it once per finding-set. If FLAGGED-RECORD MEMORY appears below, do NOT re-surface records the user dismissed/ignored unless their state has clearly changed.
 

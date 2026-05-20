@@ -154,10 +154,47 @@ export const renderBulkUpdatePreview = defineTool({
   }),
 });
 
+export const renderActionDraft = defineTool({
+  name: 'render_action_draft',
+  label: 'Open action drafts',
+  domain: 'render',
+  description: 'Open an editable Action Draft artifact — one or more drafts (email/SMS/call script/activity note) the user can edit in place before approving. Use for lead re-engagement batches and stuck-deal follow-ups. Each draft body should be fully written; the user edits then approves.',
+  schema: z.object({
+    artifactId: ArtifactId,
+    title: z.string().optional(),
+    drafts: z.array(z.object({
+      id: z.string(),
+      channel: z.enum(['email', 'sms', 'call', 'note']),
+      recordId: z.string().optional(),
+      to: z.string().optional(),
+      subject: z.string().optional(),
+      body: z.string(),
+    })).min(1),
+  }),
+});
+
+export const renderComparison = defineTool({
+  name: 'render_comparison',
+  label: 'Open comparison',
+  domain: 'render',
+  description: 'Open a side-by-side Comparison artifact for evaluating options (e.g. "follow up now vs. wait", "close lost vs. reassign"). Each option lists its tradeoffs; mark one recommended if you have a recommendation.',
+  schema: z.object({
+    artifactId: ArtifactId,
+    title: z.string().optional(),
+    options: z.array(z.object({
+      id: z.string(),
+      label: z.string(),
+      summary: z.string().optional(),
+      tradeoffs: z.array(z.string()).default([]),
+      recommended: z.boolean().optional(),
+    })).min(2),
+  }),
+});
+
 export const SFDC_RENDER_TOOLS_V2: DefinedTool[] = [
   renderSoqlResults, renderPipelineKanban, renderAccount360, renderLeadScoring,
   renderForecast, renderDashboardTiles, renderCaseSla, renderActivityTimeline,
-  renderBulkUpdatePreview,
+  renderBulkUpdatePreview, renderActionDraft, renderComparison,
 ];
 
 // ─── Handlers (just echo) ───────────────────────────────────────────
@@ -188,4 +225,10 @@ export async function handleRenderActivityTimeline(input: unknown) {
 }
 export async function handleRenderBulkUpdatePreview(input: { artifactId: string; batchId: string }) {
   return { kind: 'bulk-update-preview', artifactId: input.artifactId, batchId: input.batchId };
+}
+export async function handleRenderActionDraft(input: unknown) {
+  return { kind: 'action-draft', ...(input as object) };
+}
+export async function handleRenderComparison(input: unknown) {
+  return { kind: 'comparison', ...(input as object) };
 }

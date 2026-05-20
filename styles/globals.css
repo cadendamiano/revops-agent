@@ -768,6 +768,36 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 .plan-step{ font-size: 13px; color: var(--ink); }
 .plan-step-detail{ display: block; font-size: 12px; color: var(--ink-3); }
 
+/* ---------- Action Draft artifact ---------- */
+.draft-card{
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.draft-card[data-status="skipped"]{ opacity: 0.55; }
+.draft-head{ display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.draft-chan{ font-family: var(--mono); font-size: 11px; color: var(--accent-deep); }
+.draft-to{ color: var(--ink-3); }
+.draft-status{ margin-left: auto; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; }
+.draft-status.approved{ color: var(--pos); }
+.draft-status.skipped{ color: var(--ink-4); }
+.draft-subject{ width: 100%; }
+.draft-body{ width: 100%; resize: vertical; font-size: 13px; line-height: 1.5; }
+.draft-actions{ display: flex; gap: 8px; }
+
+/* ---------- Comparison artifact ---------- */
+.cmp-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.cmp-col{
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface);
+}
+.cmp-col.is-recommended{ border-color: var(--accent); border-width: 2px; }
+.cmp-col.is-chosen{ background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+.cmp-label{ font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.cmp-rec{ font-family: var(--mono); font-size: 10px; color: var(--accent-deep); text-transform: uppercase; }
+.cmp-summary{ font-size: 12.5px; color: var(--ink-3); }
+.cmp-tradeoffs{ margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 3px; }
+.cmp-col .btn{ margin-top: auto; }
+
 /* ---------- Resize handles ---------- */
 .resize-handle{
   cursor: col-resize;
