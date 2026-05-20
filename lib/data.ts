@@ -7,9 +7,9 @@ export type DatasetKey = 'default';
 export const DEMO_PROMPTS: string[] = [
   "What's our Q2 forecast?",
   'Show my pipeline as a kanban',
-  'Tell me about Pacific Health Systems',
+  'Tell me about Cascade Property Group',
   'Qualify hot leads from the last 7 days',
-  'Which cases are breaching SLA?',
+  'Which service tickets are breaching SLA?',
   'Run a SOQL for the top open opps closing this quarter',
 ];
 

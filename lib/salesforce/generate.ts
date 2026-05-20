@@ -404,6 +404,27 @@ function injectScenarios(
     Subject: 'Commercial water main leak — no response', Priority: 'P1', Status: 'Escalated',
     CreatedDate: daysAgo(4), SlaTargetDate: daysAgo(2), OwnerId: ctx.plumbers[0],
   });
+
+  // Flagship demo-anchor account with a fully-populated 360 (stable IDs for the
+  // scripted demo flows). Cascade Property Group — a recurring commercial client.
+  const ANCHOR = '001900900';
+  b.accounts.push({ Id: ANCHOR, Name: 'Cascade Property Group', Industry: 'Property Management', AnnualRevenue: 240000, Employees: 85, OwnerId: is0 });
+  b.contacts.push(
+    { Id: '003900901', AccountId: ANCHOR, Name: 'Diane Whitlock', Title: 'Facilities Director', Email: 'diane.whitlock@cascadepg.example', Phone: '+1-206-555-4410', OwnerId: is0, LastActivityDate: daysAgo(6) },
+    { Id: '003900902', AccountId: ANCHOR, Name: 'Marcus Bell', Title: 'Property Manager', Email: 'marcus.bell@cascadepg.example', Phone: '+1-206-555-4411', OwnerId: is0, LastActivityDate: daysAgo(9) },
+    { Id: '003900903', AccountId: ANCHOR, Name: 'Sofia Reyes', Title: 'Operations Lead', Email: 'sofia.reyes@cascadepg.example', OwnerId: is0, LastActivityDate: daysAgo(20) },
+  );
+  b.opportunities.push(
+    { Id: '006900901', Name: 'Cascade Property Group - Boiler Replacement', AccountId: ANCHOR, OwnerId: is0, StageName: 'Quoted', Amount: 46000, Probability: STAGE_PROBABILITY.Quoted, CloseDate: daysAgo(-25), CreatedDate: daysAgo(40), LastActivityDate: daysAgo(6), NextStep: 'Awaiting board approval', LeadSource: 'Repeat Customer', Service_Type__c: 'Commercial Install', Urgency__c: 'Routine', Property_Type__c: 'Commercial' },
+    { Id: '006900902', Name: 'Cascade Property Group - Quarterly Maintenance', AccountId: ANCHOR, OwnerId: is0, StageName: 'Scheduled', Amount: 8200, Probability: STAGE_PROBABILITY.Scheduled, CloseDate: daysAgo(-10), CreatedDate: daysAgo(30), LastActivityDate: daysAgo(4), NextStep: 'Crew dispatched', LeadSource: 'Repeat Customer', Service_Type__c: 'Commercial Service', Urgency__c: 'Routine', Property_Type__c: 'Commercial' },
+  );
+  let anchorAct = 0;
+  const aAct = (whatId: string, type: Activity['Type'], subject: string, age: number) =>
+    b.activities.push({ Id: '00T901' + pad(++anchorAct, 4), WhatId: whatId, WhoId: '003900901', Type: type, Subject: subject, ActivityDate: daysAgo(age), OwnerId: is0 });
+  aAct('006900901', 'Quote', 'Sent boiler replacement quote', 12);
+  aAct('006900901', 'Call', 'Reviewed quote with facilities', 6);
+  aAct('006900902', 'Meeting', 'Walked the site for Q2 maintenance', 9);
+  aAct(ANCHOR, 'Email', 'Quarterly account review notes', 6);
 }
 
 function ticketSizeFixed(i: number): number { return 350 + i * 75; }

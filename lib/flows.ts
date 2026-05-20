@@ -107,14 +107,14 @@ const SOQL_EXPLORE_FLOW: Flow = {
     { kind: 'building', delay: 200, label: 'SOQL Results', sub: 'projecting 5 fields × 25 rows' },
     { kind: 'artifact-card', delay: 320,
       artifactId: 'art_soql_q2_top',
-      title: 'Open Q2 opportunities — top 25 by Amount',
+      title: 'Open Q2 jobs — top 25 by Amount',
       sub: 'SOQL-RESULTS · 25 ROWS',
-      meta: '**$4.32M unweighted** · top: Cobalt Retail Group - POS Refresh ($410k)',
+      meta: '**top: Cascade Property Group - Boiler Replacement ($46k)**',
       icon: '◫' },
     { kind: 'suggest', delay: 150, items: [
       'Show my pipeline as a kanban',
       "What's our Q2 forecast?",
-      'Tell me about Pacific Health Systems',
+      'Tell me about Cascade Property Group',
     ] },
   ],
 };
@@ -131,23 +131,23 @@ const KANBAN_FLOW: Flow = {
   steps: [
     { kind: 'user', text: 'Show my pipeline as a kanban' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Pulling all open opportunities (Prospecting → Negotiation) and bucketing by StageName.' },
+      text: 'Pulling all open jobs (Qualified → Invoiced) and bucketing by StageName.' },
     { kind: 'tools', delay: 220, rows: [
-      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Amount, StageName, OwnerId FROM Opportunity WHERE StageName NOT IN ('Closed Won', 'Closed Lost')", status: '200', result: '37 rows' },
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Amount, StageName, OwnerId FROM Opportunity WHERE StageName NOT IN ('Closed Won', 'Closed Lost')", status: '200', result: 'rows' },
       { verb: 'EXEC', path: 'render_pipeline_kanban', filter: '5 stages', status: 'ok', result: 'rendered' },
     ] },
     { kind: 'libs', delay: 160, items: [
       { pkg: '@salesforce/sf-api', ver: '4.12.0' },
     ] },
-    { kind: 'building', delay: 200, label: 'Pipeline Kanban', sub: 'rendering 37 cards across 5 stages' },
+    { kind: 'building', delay: 200, label: 'Pipeline Kanban', sub: 'rendering open jobs across 5 stages' },
     { kind: 'artifact-card', delay: 320,
       artifactId: 'art_pipe_kanban',
       title: 'Open pipeline · kanban view',
-      sub: 'PIPELINE-KANBAN · 37 OPPS',
-      meta: '**$5.81M unweighted** · Negotiation column carries 76% of count',
+      sub: 'PIPELINE-KANBAN',
+      meta: '**Quoted column carries the most stuck value** — watch the 60-day quotes',
       icon: '◫' },
     { kind: 'suggest', delay: 150, items: [
-      'Which cases are breaching SLA?',
+      'Which service tickets are breaching SLA?',
       'Qualify hot leads from the last 7 days',
       "What's our Q2 forecast?",
     ] },
@@ -157,22 +157,22 @@ const KANBAN_FLOW: Flow = {
 // ─── account_360 ─────────────────────────────────────────────────────
 const ACCOUNT_360_FLOW: Flow = {
   id: 'account_360',
-  title: 'Account 360 — Pacific Health Systems',
+  title: 'Account 360 — Cascade Property Group',
   artifact: {
     id: 'art_acct_pacific',
     kind: 'account-360',
-    label: 'Account · Pacific Health Systems',
-    dataJson: JSON.stringify({ accountId: '001A0002' }),
+    label: 'Account · Cascade Property Group',
+    dataJson: JSON.stringify({ accountId: '001900900' }),
   },
   steps: [
-    { kind: 'user', text: 'Tell me about Pacific Health Systems' },
+    { kind: 'user', text: 'Tell me about Cascade Property Group' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Pulling the account record, open opportunities, recent activity, and key contacts for Pacific Health Systems.' },
+      text: 'Pulling the account record, open jobs, recent activity, and key contacts for Cascade Property Group.' },
     { kind: 'tools', delay: 240, rows: [
-      { verb: 'GET', path: '/services/data/v60.0/sobjects/Account/001A0002', status: '200', result: 'Pacific Health Systems' },
-      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, StageName, Amount, CloseDate FROM Opportunity WHERE AccountId = '001A0002'", status: '200', result: '4 rows' },
-      { verb: 'EXEC', path: 'sf_activity_list', filter: 'relatedTo=001A0002', status: 'ok', result: '4 activities' },
-      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Title, Email FROM Contact WHERE AccountId = '001A0002'", status: '200', result: '3 contacts' },
+      { verb: 'GET', path: '/services/data/v60.0/sobjects/Account/001900900', status: '200', result: 'Cascade Property Group' },
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, StageName, Amount, CloseDate FROM Opportunity WHERE AccountId = '001900900'", status: '200', result: '2 rows' },
+      { verb: 'EXEC', path: 'sf_activity_list', filter: 'relatedTo=001900900', status: 'ok', result: '4 activities' },
+      { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Title, Email FROM Contact WHERE AccountId = '001900900'", status: '200', result: '3 contacts' },
     ] },
     { kind: 'libs', delay: 160, items: [
       { pkg: '@salesforce/sf-api', ver: '4.12.0' },
@@ -181,27 +181,27 @@ const ACCOUNT_360_FLOW: Flow = {
     { kind: 'building', delay: 220, label: 'Account 360', sub: 'assembling opps + activity + contacts' },
     { kind: 'artifact-card', delay: 350,
       artifactId: 'art_acct_pacific',
-      title: 'Pacific Health Systems — Account 360',
-      sub: 'ACCOUNT-360 · HEALTHCARE',
-      meta: '**$672k open pipeline** · 4 opps · 3 contacts · health 78',
+      title: 'Cascade Property Group — Account 360',
+      sub: 'ACCOUNT-360 · PROPERTY MGMT',
+      meta: '**$54k open pipeline** · 2 jobs · 3 contacts · recurring client',
       icon: '◎' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Linh Tran (CIO) is the economic buyer on the EHR Expansion. Telehealth opp has a CFO escalation pending and there\'s a P1 case open ("EHR sync failing"). Recommend a CFO touch this week.' },
+      text: 'Diane Whitlock (Facilities Director) is the buyer on the Boiler Replacement quote ($46k), awaiting board approval. The Q2 maintenance job is scheduled with a crew dispatched. Recommend a check-in call before the board meets.' },
     { kind: 'suggest', delay: 150, items: [
-      'Log a meeting with Linh Tran',
-      'Show me cases breaching SLA',
-      'Approve the Pacific Health EHR discount',
+      'Log a call with Diane Whitlock',
+      'Which service tickets are breaching SLA?',
+      'Draft a follow-up on the boiler quote',
     ] },
   ],
 };
 
 // ─── lead_qualification ──────────────────────────────────────────────
 const LEAD_PREVIEW: ApprovalPreviewRow[] = [
-  { id: '00Q0001', name: 'Alex Rivera — Northwind Robotics',     currentValue: 'New',     newValue: 'Qualified' },
-  { id: '00Q0011', name: 'Quinn Rao — Aurora Diagnostics',       currentValue: 'New',     newValue: 'Qualified' },
-  { id: '00Q0014', name: 'Cameron Holt — Polaris Data',          currentValue: 'New',     newValue: 'Qualified' },
-  { id: '00Q0017', name: 'Logan Fox — Pacific Health Systems',   currentValue: 'New',     newValue: 'Qualified' },
-  { id: '00Q0020', name: 'Riley Adams — Crestline Capital',      currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0000001', name: 'Gabriela Ferreira — Referral',       currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0000011', name: 'Trevor Nash — Google Ads',           currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0000014', name: 'Patricia Owens — Website',           currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0000017', name: 'Daniel Garcia — Repeat Customer',    currentValue: 'New',     newValue: 'Qualified' },
+  { id: '00Q0000020', name: 'Linda Brown — Referral',             currentValue: 'New',     newValue: 'Qualified' },
 ];
 
 const LEAD_FLOW: Flow = {
@@ -211,12 +211,18 @@ const LEAD_FLOW: Flow = {
     id: 'art_lead_qual',
     kind: 'bulk-update-preview',
     label: 'Qualify · 5 leads',
-    dataJson: JSON.stringify({ batchId: 'btch_sfdc_leadqual_demo' }),
+    dataJson: JSON.stringify({
+      batchId: 'btch_sfdc_leadqual_demo',
+      stake: 'bulk-update',
+      recordCount: 5,
+      summary: "Set Status='Qualified' on 5 hot leads",
+      changes: LEAD_PREVIEW,
+    }),
   },
   steps: [
     { kind: 'user', text: 'Qualify hot leads from the last 7 days' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Pulling Status=New leads created in the last 7 days, then scoring on source × company size × engagement.' },
+      text: 'Pulling Status=New leads created in the last 7 days, then scoring on source × service type × engagement.' },
     { kind: 'tools', delay: 240, rows: [
       { verb: 'GET', path: '/services/data/v60.0/query', filter: "SELECT Id, Name, Company, Status, LeadSource, CreatedDate FROM Lead WHERE CreatedDate = LAST_N_DAYS:7 AND Status = 'New'", status: '200', result: '6 rows' },
       { verb: 'EXEC', path: 'render_lead_scoring', filter: '6 leads scored', status: 'ok', result: 'top 5 ≥ 70' },
@@ -258,9 +264,9 @@ const FORECAST_FLOW: Flow = {
   steps: [
     { kind: 'user', text: "What's our Q2 forecast?" },
     { kind: 'agent-stream', delay: 200,
-      text: 'Running the **ForecastQ2** report — weighted pipeline rollup for CloseDate ∈ [2026-04-01, 2026-06-30]. Quota total across 4 AEs is $3.1M.' },
+      text: 'Running the **ForecastQ2** report — weighted pipeline rollup for CloseDate ∈ [2026-04-01, 2026-06-30] across the 3 inside-sales reps.' },
     { kind: 'tools', delay: 220, rows: [
-      { verb: 'EXEC', path: 'sf_analytics_run_report', filter: 'reportId=ForecastQ2', status: 'ok', result: 'totalWeighted ≈ $2.41M · attainment 77.9%' },
+      { verb: 'EXEC', path: 'sf_analytics_run_report', filter: 'reportId=ForecastQ2', status: 'ok', result: 'weighted pipeline computed' },
     ] },
     { kind: 'libs', delay: 160, items: [
       { pkg: '@salesforce/sf-api', ver: '4.12.0' },
@@ -271,14 +277,14 @@ const FORECAST_FLOW: Flow = {
       artifactId: 'art_fc_q2',
       title: 'Q2 pipeline forecast (weighted)',
       sub: 'FORECAST · WEIGHTED',
-      meta: '**$2.41M weighted** · 77.9% of $3.1M quota · Negotiation drives ~60% of weighted total',
+      meta: '**A few large commercial installs drive most of the weighted total** — drag the sliders to test scenarios',
       icon: '$' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Priya is the only AE pacing above 100%. Marcus and Devon are sub-80%. 28 stale Negotiation deals account for most of the gap — closing or cleaning them would unblock a real read.' },
+      text: 'The forecast leans on three big commercial-install quotes; if any one slips, the quarter takes a real hit. Adjust the stage-probability sliders in the artifact to see the impact.' },
     { kind: 'suggest', delay: 150, items: [
       'Show my pipeline as a kanban',
-      'Log a call with Marcus',
-      'Which cases are breaching SLA?',
+      'Why are these deals stuck?',
+      'Which service tickets are breaching SLA?',
     ] },
   ],
 };
@@ -293,29 +299,29 @@ const CASE_SLA_FLOW: Flow = {
     label: 'Cases · SLA review',
   },
   steps: [
-    { kind: 'user', text: 'Which cases are breaching SLA?' },
+    { kind: 'user', text: 'Which service tickets are breaching SLA?' },
     { kind: 'agent-stream', delay: 200,
-      text: 'Pulling open cases past their SLA target or within 24h. Sorting by slaPct desc.' },
+      text: 'Pulling open service tickets past their SLA target or within 24h. Sorting by slaPct desc.' },
     { kind: 'tools', delay: 220, rows: [
-      { verb: 'EXEC', path: 'sf_case_sla_breach', filter: '', status: 'ok', result: '5 cases ≥ 75% SLA · 2 breached' },
-      { verb: 'EXEC', path: 'render_case_sla', filter: '5 cases', status: 'ok', result: 'rendered' },
+      { verb: 'EXEC', path: 'sf_case_sla_breach', filter: '', status: 'ok', result: 'breaching tickets found' },
+      { verb: 'EXEC', path: 'render_case_sla', filter: 'cases', status: 'ok', result: 'rendered' },
     ] },
     { kind: 'libs', delay: 160, items: [
       { pkg: '@salesforce/sf-api', ver: '4.12.0' },
     ] },
-    { kind: 'building', delay: 200, label: 'Case SLA Heatmap', sub: 'sorting 5 cases by SLA %' },
+    { kind: 'building', delay: 200, label: 'Case SLA Heatmap', sub: 'sorting tickets by SLA %' },
     { kind: 'artifact-card', delay: 320,
       artifactId: 'art_case_sla',
-      title: 'Open cases — SLA pressure',
-      sub: 'CASE-SLA · 5 CASES',
-      meta: '**2 P1 breached** · Pacific Health (EHR sync), Mosaic (Claims API)',
+      title: 'Open service tickets — SLA pressure',
+      sub: 'CASE-SLA',
+      meta: '**P1 breach: commercial water main leak (no response)**',
       icon: '⚠' },
     { kind: 'agent-stream', delay: 200,
-      text: 'P1 cases C-1001 (Pacific Health · EHR sync) and C-1002 (Mosaic · Claims API) are past their SLA. Want me to reassign the open P1s to Renée Okafor (Manager)?' },
+      text: 'A P1 ticket (C-9001 · commercial water main leak) is past its SLA target with no response. Want me to escalate it to the operations manager?' },
     { kind: 'suggest', delay: 150, items: [
-      'Reassign P1 cases to Renée Okafor',
-      'Tell me about Pacific Health Systems',
-      'Log a call with Renée',
+      'Escalate the P1 ticket to the ops manager',
+      'Tell me about Cascade Property Group',
+      'Draft a follow-up on the boiler quote',
     ] },
   ],
 };
@@ -336,7 +342,7 @@ export type FlowId = string;
 export function matchFlow(text: string, _dataset: DatasetKey = 'default'): string | null {
   const t = text.toLowerCase();
   // Order: specific before generic.
-  if (t.includes('account 360') || t.includes('pacific health') || t.includes('account360')) {
+  if (t.includes('account 360') || t.includes('cascade') || t.includes('account360')) {
     return 'account_360';
   }
   if (t.includes('sla') || t.includes('p1 case') || t.includes('breach') ||
