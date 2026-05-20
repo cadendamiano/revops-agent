@@ -6,6 +6,7 @@ import type { Turn } from './turns';
 import type { ArtifactKind, FlowStep } from './flows';
 import { SEED_WORKSPACES } from './data';
 import type { Shortcut } from './shortcuts';
+import { mergeFlags, type FlaggedRecord, type FlagInput, type FlagKind, type FlagDisposition } from './memory/types';
 import {
   DEFAULT_MODEL_ID,
   MODELS,
@@ -16,6 +17,9 @@ import {
 } from './models';
 
 export type Mode = 'demo' | 'testing';
+// Per-session execution mode (PRD §7.2). Plan = approve every gated action;
+// Auto = pre-authorize non-mass-action batches (dual-control still prompts).
+export type ExecMode = 'plan' | 'auto';
 export type WorkspaceView = 'workspaces' | 'history';
 
 export type WorkspaceFile = {
@@ -125,6 +129,15 @@ type State = {
   setActiveArtifact: (id: string | null) => void;
 
   setMode: (m: Mode) => void;
+
+  execMode: ExecMode;
+  setExecMode: (m: ExecMode) => void;
+
+  flaggedMemory: FlaggedRecord[];
+  flagRecords: (recs: FlagInput[]) => void;
+  setFlagDisposition: (recordId: string, flag: FlagKind, disposition: FlagDisposition) => void;
+  clearFlaggedMemory: () => void;
+
   activateArtifact: (id: string) => void;
   acknowledgeArtifactDryRun: (id: string) => void;
 
@@ -239,6 +252,21 @@ export const useStore = create<State>()(
 
       setMode: (mode) =>
         set({ mode, streaming: false, composer: '', activeArtifact: null }),
+
+      execMode: 'plan',
+      setExecMode: (execMode) => set({ execMode }),
+
+      flaggedMemory: [],
+      flagRecords: (recs) => set(s => ({ flaggedMemory: mergeFlags(s.flaggedMemory, recs) })),
+      setFlagDisposition: (recordId, flag, disposition) =>
+        set(s => ({
+          flaggedMemory: s.flaggedMemory.map(m =>
+            m.recordId === recordId && m.flag === flag
+              ? { ...m, disposition, updatedAt: Date.now() }
+              : m,
+          ),
+        })),
+      clearFlaggedMemory: () => set({ flaggedMemory: [] }),
 
       activateArtifact: (id) =>
         set(s => {
@@ -653,6 +681,8 @@ export const useStore = create<State>()(
         workspaceView: s.workspaceView,
         expandedWorkspaceIds: s.expandedWorkspaceIds,
         shortcuts: s.shortcuts,
+        flaggedMemory: s.flaggedMemory,
+        execMode: s.execMode,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
@@ -669,6 +699,8 @@ export const useStore = create<State>()(
         state.expandedWorkspaceIds = state.expandedWorkspaceIds ?? [];
         state.workspaceView = state.workspaceView ?? 'workspaces';
         state.shortcuts = state.shortcuts ?? [];
+        state.flaggedMemory = state.flaggedMemory ?? [];
+        state.execMode = state.execMode ?? 'plan';
       },
     }
   )

@@ -47,7 +47,7 @@ export default function LoginPage() {
   return (
     <div className="login-shell">
       <form className="login-card" onSubmit={onSubmit}>
-        <div className="login-brand">Salesforce Coworker</div>
+        <div className="login-brand">RevOps Agent</div>
         <div className="login-sub">Internal development build</div>
 
         {!hasElectron && (

@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  experimental: {
+    serverComponentsExternalPackages: ['better-sqlite3'],
+  },
   webpack(config, { isServer }) {
     if (!isServer) {
       // Strip node: prefix so built-in fallbacks apply

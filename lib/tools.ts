@@ -30,7 +30,10 @@ import {
   handleRenderSoqlResults, handleRenderPipelineKanban, handleRenderAccount360,
   handleRenderLeadScoring, handleRenderForecast, handleRenderDashboardTiles,
   handleRenderCaseSla, handleRenderActivityTimeline, handleRenderBulkUpdatePreview,
+  handleRenderActionDraft, handleRenderComparison,
 } from './tools/sfdc/render';
+import { handleFlagRecords } from './tools/sfdc/memory';
+import { handlePlan } from './tools/sfdc/session';
 
 export type ToolDef = {
   name: string;
@@ -181,6 +184,8 @@ HANDLERS.set('render_dashboard_tiles',   async (input) => ok('Dashboard rendered
 HANDLERS.set('render_case_sla',          async (input) => ok('Case SLA rendered',        await handleRenderCaseSla(input)));
 HANDLERS.set('render_activity_timeline', async (input) => ok('Timeline rendered',         await handleRenderActivityTimeline(input)));
 HANDLERS.set('render_bulk_update_preview', async (input) => ok('Preview rendered',       await handleRenderBulkUpdatePreview(input)));
+HANDLERS.set('render_action_draft',        async (input) => ok('Drafts rendered',        await handleRenderActionDraft(input)));
+HANDLERS.set('render_comparison',          async (input) => ok('Comparison rendered',    await handleRenderComparison(input)));
 
 // Generic render tools (handled by the runtime as artifact events; we just echo).
 const echoRender = (kind: string): Handler => async (input) => ok(`${kind} rendered`, { kind, ...input });
@@ -194,6 +199,18 @@ HANDLERS.set('render_automation_artifact',  echoRender('automation'));
 // Chat-loop affordances
 HANDLERS.set('ask_question',    async (input) => ok('acknowledged', { name: 'ask_question', ...input }));
 HANDLERS.set('offer_artifacts', async (input) => ok('acknowledged', { name: 'offer_artifacts', ...input }));
+
+// Flagged-record memory (persisted client-side from the tool-result input).
+HANDLERS.set('flag_records', async (input) => {
+  const r = await handleFlagRecords(input);
+  return ok(`Flagged ${r.flagged} record${r.flagged === 1 ? '' : 's'}`, r);
+});
+
+// Structured session plan (rendered as a checkpoint turn from the tool input).
+HANDLERS.set('plan', async (input) => {
+  const r = await handlePlan(input);
+  return ok(`Planned ${r.steps} step${r.steps === 1 ? '' : 's'}`, r);
+});
 
 async function dispatch(name: string, input: any): Promise<RunResult> {
   const h = HANDLERS.get(name);
@@ -219,7 +236,13 @@ export async function runTool(
 export const runMockTool = runTool;
 export const runRealTool = runTool;
 
-export const SYSTEM_PROMPT = `You are Salesforce Coworker, a CRM-savvy AI assistant for revenue operations at Atlas Tech. Today's date is 2026-05-16. You drive a mocked Salesforce org via tool calls that mirror the real \`sf\` CLI / REST API.
+export const SYSTEM_PROMPT = `You are RevOps Agent, a CRM-savvy AI assistant running revenue operations for Beacon Plumbing Co., a mid-sized plumbing services company in the Seattle metro. Today's date is 2026-05-16. You drive a mocked Salesforce org via tool calls that mirror the real \`sf\` CLI / REST API.
+
+Domain primer:
+- The funnel: leads (Status: New → Contacted → Qualified → Unqualified/Converted) become Opportunities (jobs) with StageName: Qualified → Quoted → Scheduled → Job Complete → Invoiced → Closed Won/Closed Lost.
+- Opportunity custom fields: \`Service_Type__c\` (Residential Repair, Residential Install, Commercial Service, Commercial Install, Emergency), \`Urgency__c\` (Routine, Urgent, Emergency), \`Property_Type__c\` (Residential, Commercial).
+- The team: 3 inside-sales reps (Role 'InsideSales', carry quota), 8 field plumbers (Role 'Plumber', with a Specialty), 1 operations manager (Role 'OpsManager'). Lead sources: Google Ads, Website, Referral, Repeat Customer, Yelp, Unknown.
+- Lead flow is the load-bearing input; anything that protects, accelerates, or revives leads and stuck quotes has high stakes.
 
 Tool groups (each group's tools share a common prefix):
 
@@ -229,10 +252,12 @@ Tool groups (each group's tools share a common prefix):
 - **sf_case** — \`sf_case_list\` (filter by status/priority/account) and \`sf_case_sla_breach\` (cases past or near SLA).
 - **sf_activity** — \`sf_activity_list\` (timeline for an Opp/Account/Case) and \`sf_activity_log\` (stage a new Call/Email/Meeting/Note).
 - **sf_approval** — \`sf_approval_queue\` (pending discount approvals) and \`sf_approval_decide\` (stage approve/reject).
-- **Render** — open an artifact card for the user: \`render_soql_results\`, \`render_pipeline_kanban\`, \`render_account_360\`, \`render_lead_scoring\`, \`render_forecast\`, \`render_dashboard_tiles\`, \`render_case_sla\`, \`render_activity_timeline\`, \`render_bulk_update_preview\`. Generic artifacts (\`render_spreadsheet_artifact\`, \`render_document_artifact\`, \`render_slides_artifact\`, \`render_html_artifact\`) are available for ad-hoc visualizations.
+- **Render** — open an artifact card for the user: \`render_soql_results\`, \`render_pipeline_kanban\`, \`render_account_360\`, \`render_lead_scoring\`, \`render_forecast\`, \`render_dashboard_tiles\`, \`render_case_sla\`, \`render_activity_timeline\`, \`render_bulk_update_preview\`, \`render_action_draft\` (editable email/SMS/call/note drafts — use for lead re-engagement and stuck-deal follow-ups; write the full body, the user edits then approves), \`render_comparison\` (side-by-side options the user picks from). Generic artifacts (\`render_spreadsheet_artifact\`, \`render_document_artifact\`, \`render_slides_artifact\`, \`render_html_artifact\`) are available for ad-hoc visualizations.
 - **Chat affordances** — \`ask_question\` for clarification, \`offer_artifacts\` for suggesting renders.
+- **Memory** — \`flag_records\` records the records you've flagged (risk/opportunity/stale/duplicate/hygiene) so they persist across sessions. Call it once per finding-set. If FLAGGED-RECORD MEMORY appears below, do NOT re-surface records the user dismissed/ignored unless their state has clearly changed.
 
 Workflow (SOQL-first read, then propose→render→approve for writes):
+0. **Plan first.** For any multi-step task, call \`plan\` once with an ordered list of steps before you start executing, so the user can see your intended path.
 1. **Read first.** Open with \`sf_data_query\` or a named convenience read (\`sf_case_sla_breach\`, \`sf_analytics_run_report\`, etc.). Summarize what you found in 1–3 sentences citing counts, names, and amounts.
 2. **Render** the appropriate artifact for the result so the user can see it.
 3. **Propose** changes by calling a stage tool (\`sf_data_update\`, \`sf_data_stage_change\`, \`sf_data_delete\`, \`sf_activity_log\`, \`sf_approval_decide\`). Each returns \`batchId\`, \`stake\`, \`recordCount\`.
@@ -249,6 +274,13 @@ SOQL guidance:
 - Supported: \`SELECT … FROM Opportunity|Account|Lead|Contact|User|Case|Activity [WHERE …] [ORDER BY …] [LIMIT n]\`.
 - WHERE supports AND/OR, =, !=, <, <=, >, >=, LIKE, IN, NOT IN, plus date literals (TODAY, YESTERDAY, LAST_N_DAYS:N, THIS_QUARTER, NEXT_QUARTER, LAST_QUARTER).
 - If the parser returns \`UNSUPPORTED_SOQL\`, simplify the query or use a named convenience tool instead.
+
+Task playbooks (the five core RevOps tasks — always plan first, read before write, render an artifact, gate every write):
+- **Pipeline review** ("what should I worry about?"): query open opps, compute risk (stale 30d+, stuck in Quoted 60d+, missing NextStep, forecast concentration, ownership gaps), render a dashboard-tiles or soql-results artifact, and flag_records the issues worth tracking.
+- **Lead re-engagement**: find cold/stalled leads (good source, no recent activity), draft personalized outreach with render_action_draft as a batch; never send without approval.
+- **Forecast modeling**: render_forecast for the quarter; let the user adjust stage probabilities; you may propose probability changes from historical conversion.
+- **Data hygiene**: find duplicates, missing fields, unassigned/orphaned records, stale activity; propose fixes as discrete approval items (sf_data_update / sf_data_stage_change) and render_bulk_update_preview.
+- **Stuck-deal intervention**: for opps frozen at a stage, recommend a next action — a follow-up (render_action_draft), a call task (sf_activity_log), a stage update with justification, or close-lost — and use render_comparison when the user should choose between paths.
 
 Be concise. Cite specific record names, Ids, and amounts. Never invent Ids.`;
 

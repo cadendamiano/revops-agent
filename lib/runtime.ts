@@ -3,11 +3,54 @@
 import { FLOWS, LOGISTICS_FLOWS, type ArtifactKind, type Flow, type FlowStep } from './flows';
 import { newId, type Turn } from './turns';
 import { useStore, getActiveWorkspaceThread, type ApprovalPayload } from './store';
+import type { FlagInput } from './memory/types';
 import { MODEL_TOOLS, INTERNAL_TOOLS } from './tools';
 
 const ALL_TOOLS = [...MODEL_TOOLS, ...INTERNAL_TOOLS];
 function toolLabel(name: string): string {
   return ALL_TOOLS.find(t => t.name === name)?.label ?? name;
+}
+
+// SFDC render tools → artifact kind. Lets live (testing-mode) tool calls open
+// the rich artifacts, matching what scripted demo flows produce.
+const SFDC_RENDER_KIND: Record<string, ArtifactKind> = {
+  render_soql_results: 'soql-results',
+  render_pipeline_kanban: 'pipeline-kanban',
+  render_account_360: 'account-360',
+  render_lead_scoring: 'lead-scoring',
+  render_forecast: 'forecast',
+  render_dashboard_tiles: 'dashboard-tiles',
+  render_case_sla: 'case-sla',
+  render_activity_timeline: 'activity-timeline',
+  render_bulk_update_preview: 'bulk-update-preview',
+  render_action_draft: 'action-draft',
+  render_comparison: 'comparison',
+};
+
+function createSfdcRenderArtifact(kind: ArtifactKind, input: Record<string, unknown>) {
+  const { artifactId: _omit, title, ...rest } = input;
+  const artId = `art_${kind.replace(/-/g, '_')}`;
+  const heading = typeof title === 'string' ? title : kind.replace(/-/g, ' ');
+  const artifact = {
+    id: artId,
+    kind,
+    label: heading,
+    status: 'draft' as const,
+    version: 1,
+    createdBy: 'RevOps Agent',
+    title: heading,
+    dataJson: JSON.stringify(rest),
+  };
+  const cardTurn: Turn = {
+    id: newId('ac'),
+    kind: 'artifact-card',
+    artifactId: artId,
+    title: heading,
+    sub: 'GENERATED',
+    meta: '',
+    icon: '◫',
+  };
+  useStore.getState().createArtifactFromEvent(artId, artifact, cardTurn);
 }
 
 type HistoryTurn = { role: 'user' | 'assistant'; text: string };
@@ -417,14 +460,17 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
     rafHandle = null;
   };
 
+  currentAbort = new AbortController();
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
+      signal: currentAbort.signal,
       body: JSON.stringify({
         model: s.tweaks.modelId,
         userMessage: userText,
         history,
+        memory: s.flaggedMemory,
         ...(s.mode === 'testing' ? { mode: 'testing' } : {}),
         ...(opts ? {
           forcedKind: opts.forcedKind,
@@ -488,6 +534,27 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
               truncated: ev.dataTruncated === true,
             });
           }
+          // Flagged-record memory: persist the records the agent flagged.
+          if (ev.ok && ev.name === 'flag_records') {
+            const recs = (ev as { input?: { records?: FlagInput[] } }).input?.records;
+            if (Array.isArray(recs) && recs.length > 0) {
+              useStore.getState().flagRecords(recs);
+            }
+          }
+          // SFDC render tools (testing mode): open the rich artifact inline.
+          if (ev.ok && SFDC_RENDER_KIND[ev.name]) {
+            const inp = (ev as { input?: Record<string, unknown> }).input;
+            if (inp) createSfdcRenderArtifact(SFDC_RENDER_KIND[ev.name], inp);
+          }
+          // Structured plan: render a checkpoint turn at the top of the work.
+          if (ev.ok && ev.name === 'plan') {
+            const inp = (ev as { input?: { goal?: string; steps?: { title: string; detail?: string }[] } }).input;
+            if (inp && Array.isArray(inp.steps) && inp.steps.length > 0) {
+              useStore.getState().addTurnToActiveWorkspaceThread({
+                id: newId('pl'), kind: 'plan', goal: inp.goal, steps: inp.steps,
+              });
+            }
+          }
         } else if (ev.type === 'tool-error') {
           const tid = toolTurnIds[ev.id];
           if (tid) {
@@ -538,6 +605,14 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
             payload,
             simulated: ev.simulated === true,
           });
+          // Auto mode (PRD §7.2): pre-authorize non-mass-action batches without a
+          // per-item click. Dual-control (mass-action) always still prompts.
+          const st = useStore.getState();
+          const gated = (payload as { stake?: string }).stake === 'mass-action'
+            || (payload as { requiresSecondApprover?: boolean }).requiresSecondApprover === true;
+          if (st.execMode === 'auto' && !gated) {
+            void handleApprove(payload.batchId);
+          }
         } else if (ev.type === 'form-question') {
           cancelPendingText();
           useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: acc, streaming: false });
@@ -581,12 +656,29 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
     }
   } catch (e: any) {
     cancelPendingText();
-    useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
-      text: `_Couldn't reach the model. ${e?.message ?? 'unknown error'}. Set ANTHROPIC_API_KEY / GEMINI_API_KEY in .env.local and restart._`,
-      streaming: false,
-    });
+    if (e?.name === 'AbortError') {
+      // User terminated the session (PRD §7.13). Persist what we have.
+      useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
+        text: (acc ? acc + '\n\n' : '') + '_Session stopped by user._',
+        streaming: false,
+      });
+    } else {
+      useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
+        text: `_Couldn't reach the model. ${e?.message ?? 'unknown error'}. Set ANTHROPIC_API_KEY / GEMINI_API_KEY in .env.local and restart._`,
+        streaming: false,
+      });
+    }
   } finally {
     cancelPendingText();
+    currentAbort = null;
     useStore.getState().setStreaming(false);
   }
+}
+
+// Active request controller so the user can terminate a running session.
+let currentAbort: AbortController | null = null;
+
+/** Terminate the in-flight session (PRD §7.13). */
+export function stopLLM() {
+  currentAbort?.abort();
 }

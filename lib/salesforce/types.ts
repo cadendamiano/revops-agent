@@ -1,35 +1,52 @@
-// Salesforce-flavored domain types. Field names mirror real SF objects.
+// Salesforce-flavored domain types for Beacon Plumbing Co.
+// Field names mirror real SF objects; union values are plumbing-specific.
 export type Id = string;
 export type IsoDate = string; // YYYY-MM-DD
 
 export const TODAY: IsoDate = '2026-05-16';
 
-export type UserRole = 'AE' | 'SDR' | 'Manager' | 'RevOps';
+// ─── Users / roster ─────────────────────────────────────────────────
+// 3 inside-sales reps, 8 field plumbers, 1 operations manager.
+export type UserRole = 'InsideSales' | 'Plumber' | 'OpsManager';
+export type PlumberSpecialty = 'Residential' | 'Commercial' | 'Emergency' | 'Install';
 
 export type User = {
   Id: Id;
   Name: string;
   Email: string;
   Role: UserRole;
-  Quota?: number; // ARR quota for AEs only
+  Quota?: number;            // booked-revenue quota for inside-sales reps
+  Specialty?: PlumberSpecialty; // plumbers only
 };
 
-export type Industry = 'Software' | 'Manufacturing' | 'Healthcare' | 'FinServ' | 'Retail';
+// ─── Account ────────────────────────────────────────────────────────
+// "Industry" retained as the account-type field name for component compat.
+export type Industry = 'Residential' | 'Commercial' | 'Property Management';
 
 export type Account = {
   Id: Id;
   Name: string;
-  Industry: Industry;
-  AnnualRevenue: number;
-  Employees: number;
+  Industry: Industry;       // account type
+  AnnualRevenue: number;    // est. annual spend with Beacon
+  Employees: number;        // 1 for residential; staff count for commercial
   OwnerId: Id;
 };
 
+// ─── Opportunity (a job / deal) ─────────────────────────────────────
+// Plumbing funnel on the opportunity side (post lead-qualification).
 export type OpportunityStage =
-  | 'Prospecting' | 'Qualification' | 'Discovery' | 'Proposal'
-  | 'Negotiation' | 'Closed Won' | 'Closed Lost';
+  | 'Qualified' | 'Quoted' | 'Scheduled' | 'Job Complete'
+  | 'Invoiced' | 'Closed Won' | 'Closed Lost';
 
-export type LeadSource = 'Inbound' | 'Outbound' | 'Partner' | 'Event';
+export type LeadSource =
+  | 'Google Ads' | 'Website' | 'Referral' | 'Repeat Customer' | 'Yelp' | 'Unknown';
+
+export type ServiceType =
+  | 'Residential Repair' | 'Residential Install' | 'Commercial Service'
+  | 'Commercial Install' | 'Emergency';
+
+export type Urgency = 'Routine' | 'Urgent' | 'Emergency';
+export type PropertyType = 'Residential' | 'Commercial';
 
 export type Opportunity = {
   Id: Id;
@@ -44,19 +61,27 @@ export type Opportunity = {
   LastActivityDate?: IsoDate;
   NextStep?: string;
   LeadSource?: LeadSource;
+  // Plumbing custom fields.
+  Service_Type__c?: ServiceType;
+  Urgency__c?: Urgency;
+  Property_Type__c?: PropertyType;
 };
 
-export type LeadStatus = 'New' | 'Working' | 'Qualified' | 'Unqualified';
+// ─── Lead ───────────────────────────────────────────────────────────
+export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Unqualified' | 'Converted';
 
 export type Lead = {
   Id: Id;
   Name: string;
-  Company: string;
+  Company: string;          // homeowner name or business name
   Email: string;
   Status: LeadStatus;
   LeadSource: LeadSource;
   CreatedDate: IsoDate;
+  LastActivityDate?: IsoDate;
   OwnerId?: Id;
+  Phone?: string;
+  Service_Type__c?: ServiceType;
 };
 
 // ─── Contact ────────────────────────────────────────────────────────
@@ -68,10 +93,11 @@ export type Contact = {
   Email: string;
   Phone?: string;
   OwnerId?: Id;
+  LastActivityDate?: IsoDate;
 };
 
 // ─── Activity (tasks/events/comms) ──────────────────────────────────
-export type ActivityType = 'Call' | 'Email' | 'Meeting' | 'Note' | 'StageChange';
+export type ActivityType = 'Call' | 'Email' | 'SMS' | 'Meeting' | 'Note' | 'Quote' | 'StageChange';
 export type Activity = {
   Id: Id;
   WhatId: Id;     // Opportunity, Account, Case Id
@@ -83,7 +109,7 @@ export type Activity = {
   OwnerId: Id;
 };
 
-// ─── Case ───────────────────────────────────────────────────────────
+// ─── Case (service ticket) ──────────────────────────────────────────
 export type CasePriority = 'P1' | 'P2' | 'P3';
 export type CaseStatus = 'New' | 'Working' | 'Escalated' | 'Closed';
 export type Case = {
@@ -180,11 +206,11 @@ export function daysBetween(a: IsoDate, b: IsoDate): number {
 
 // Stage → default probability when none specified.
 export const STAGE_PROBABILITY: Record<OpportunityStage, number> = {
-  Prospecting: 10,
-  Qualification: 20,
-  Discovery: 40,
-  Proposal: 60,
-  Negotiation: 80,
+  Qualified: 20,
+  Quoted: 40,
+  Scheduled: 75,
+  'Job Complete': 90,
+  Invoiced: 95,
   'Closed Won': 100,
   'Closed Lost': 0,
 };

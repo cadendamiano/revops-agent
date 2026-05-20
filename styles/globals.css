@@ -720,6 +720,22 @@ input, textarea, select{ font-family: inherit; color: inherit; }
 .modality-chip:disabled{ opacity: 0.5; cursor: not-allowed; }
 
 .composer-spacer{ flex: 1; }
+.exec-toggle{
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--ink-3); cursor: pointer; background: var(--surface);
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.exec-toggle:hover{ color: var(--ink); border-color: var(--ink-4); }
+.exec-toggle .exec-toggle-dot{
+  width: 6px; height: 6px; border-radius: 50%; background: var(--pos);
+}
+.exec-toggle.is-auto{
+  color: var(--warn); border-color: var(--warn);
+  background: color-mix(in oklab, var(--warn) 12%, var(--surface));
+}
+.exec-toggle.is-auto .exec-toggle-dot{ background: var(--warn); }
 .composer-mode{
   font-family: var(--mono); font-size: 10.5px; color: var(--ink-4);
   display: flex; align-items: center; gap: 6px;
@@ -734,6 +750,70 @@ input, textarea, select{ font-family: inherit; color: inherit; }
   transition: background 0.12s;
 }
 .send-btn:hover{ background: color-mix(in oklab, var(--rule) 85%, var(--accent)); }
+.send-btn.stop-btn{ background: var(--danger); }
+.send-btn.stop-btn:hover{ background: color-mix(in oklab, var(--danger) 85%, #000); }
+
+/* ---------- Session plan (checkpoint) ---------- */
+.plan-card{
+  border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius-lg); background: var(--surface);
+  padding: 10px 14px; margin: 2px 0;
+}
+.plan-head{
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em;
+  color: var(--ink-3); text-transform: uppercase; margin-bottom: 6px;
+}
+.plan-goal{ color: var(--ink-4); text-transform: none; letter-spacing: 0; }
+.plan-steps{ margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.plan-step{ font-size: 13px; color: var(--ink); }
+.plan-step-detail{ display: block; font-size: 12px; color: var(--ink-3); }
+
+/* ---------- Action Draft artifact ---------- */
+.draft-card{
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.draft-card[data-status="skipped"]{ opacity: 0.55; }
+.draft-head{ display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.draft-chan{ font-family: var(--mono); font-size: 11px; color: var(--accent-deep); }
+.draft-to{ color: var(--ink-3); }
+.draft-status{ margin-left: auto; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; }
+.draft-status.approved{ color: var(--pos); }
+.draft-status.skipped{ color: var(--ink-4); }
+.draft-subject{ width: 100%; }
+.draft-body{ width: 100%; resize: vertical; font-size: 13px; line-height: 1.5; }
+.draft-actions{ display: flex; gap: 8px; }
+
+/* ---------- Comparison artifact ---------- */
+.cmp-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.cmp-col{
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface);
+}
+.cmp-col.is-recommended{ border-color: var(--accent); border-width: 2px; }
+.cmp-col.is-chosen{ background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+.cmp-label{ font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.cmp-rec{ font-family: var(--mono); font-size: 10px; color: var(--accent-deep); text-transform: uppercase; }
+.cmp-summary{ font-size: 12.5px; color: var(--ink-3); }
+.cmp-tradeoffs{ margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 3px; }
+.cmp-col .btn{ margin-top: auto; }
+
+/* ---------- Interactive forecast sliders ---------- */
+.fc-sliders{
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface);
+}
+.fc-sliders-head{
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.fc-slider-row{ display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; font-size: 12.5px; }
+.fc-slider-row input[type="range"]{ width: 100%; accent-color: var(--accent); }
+.fc-slider-val{ text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.fc-slider-actions{ display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+/* ---------- Task templates (empty thread, testing mode) ---------- */
+.task-templates{ display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; max-width: 460px; }
 
 /* ---------- Resize handles ---------- */
 .resize-handle{

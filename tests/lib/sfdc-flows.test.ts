@@ -8,9 +8,9 @@ describe('matchFlow', () => {
     const expected: Record<string, string | null> = {
       "What's our Q2 forecast?": 'forecast_review',
       'Show my pipeline as a kanban': 'pipeline_kanban',
-      'Tell me about Pacific Health Systems': 'account_360',
+      'Tell me about Cascade Property Group': 'account_360',
       'Qualify hot leads from the last 7 days': 'lead_qualification',
-      'Which cases are breaching SLA?': 'case_sla_review',
+      'Which service tickets are breaching SLA?': 'case_sla_review',
       'Run a SOQL for the top open opps closing this quarter': 'soql_explore',
     };
     for (const prompt of DEMO_PROMPTS) {

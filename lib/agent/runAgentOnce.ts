@@ -10,6 +10,7 @@ import { buildModelTools, buildRequirementsBlock, coerceArtifactKind, filterTool
 import { jsonSchemaToGemini, type Event, type ChatHistoryTurn, type ApprovalPayload } from '@/lib/chatRouteHelpers';
 import { ensureBraintrustLogger, traced, type Span } from '@/lib/braintrust';
 import { getDefinedTool, validateToolInput } from '@/lib/tools/index';
+import { buildMemoryPromptBlock, type FlaggedRecord } from '@/lib/memory/types';
 
 export type RunAgentArgs = {
   model: string;
@@ -24,6 +25,8 @@ export type RunAgentArgs = {
   commandName?: string;
   shortcutAllowedTools?: string[];
   shortcutSystemPrompt?: string;
+  /** Flagged-record memory from the client, injected into the system prompt. */
+  memory?: FlaggedRecord[];
   /** Optional live-event callback. Used by the SSE route; evals can omit it. */
   onEvent?: (ev: Event) => void;
 };
@@ -100,9 +103,11 @@ export async function runAgentOnce(args: RunAgentArgs): Promise<RunAgentResult> 
     args.forcedKind && args.commandName
       ? `${baseSystem}\n\n${buildRequirementsBlock(args.commandName, args.forcedKind, args.requirements ?? [])}`
       : baseSystem;
-  const systemPrompt = args.shortcutSystemPrompt
+  const withShortcut = args.shortcutSystemPrompt
     ? `${withRequirements}\n\n${args.shortcutSystemPrompt}`
     : withRequirements;
+  const memoryBlock = buildMemoryPromptBlock(args.memory);
+  const systemPrompt = memoryBlock ? `${withShortcut}\n\n${memoryBlock}` : withShortcut;
   const allTools = buildModelTools(args.forcedKind);
   const afterDisabled = disabledTools.size > 0
     ? allTools.filter(t => !disabledTools.has(t.name))

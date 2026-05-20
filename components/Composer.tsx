@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useStore, getActiveWorkspaceThread } from '@/lib/store';
-import { runFlow, runLLM } from '@/lib/runtime';
+import { runFlow, runLLM, stopLLM } from '@/lib/runtime';
 import { ModelPicker } from './ModelPicker';
 import { ModalityPicker } from './ModalityPicker';
 import { matchSlashPrefixWithShortcuts, parseSlashWithShortcuts } from '@/lib/slashCommands';
@@ -11,6 +11,25 @@ import { resolveComposerSubmit } from '@/lib/resolveComposerSubmit';
 import { SlashMenu } from './SlashMenu';
 
 const SLASH_PREFIX_RE = /^\/([a-z0-9-]*)$/i;
+
+function ExecModeToggle() {
+  const execMode = useStore(s => s.execMode);
+  const setExecMode = useStore(s => s.setExecMode);
+  const isAuto = execMode === 'auto';
+  return (
+    <button
+      type="button"
+      className={'exec-toggle' + (isAuto ? ' is-auto' : '')}
+      onClick={() => setExecMode(isAuto ? 'plan' : 'auto')}
+      title={isAuto
+        ? 'Auto mode: approved batches run without a per-item click (dual-control still prompts). Click to switch to Plan.'
+        : 'Plan mode: every write waits for your approval. Click to switch to Auto.'}
+    >
+      <span className="exec-toggle-dot" />
+      {isAuto ? 'Auto' : 'Plan'}
+    </button>
+  );
+}
 
 export function Composer() {
   const composer = useStore(s => s.composer);
@@ -218,11 +237,18 @@ export function Composer() {
           style={{ opacity: streaming ? 0.55 : 1 }}
         />
         <div className="composer-actions">
+          <ExecModeToggle />
           <div className="composer-spacer" />
           <ModelPicker />
-          <button className="send-btn" onClick={onSubmit} disabled={streaming}>
-            ↵
-          </button>
+          {streaming ? (
+            <button className="send-btn stop-btn" onClick={() => stopLLM()} title="Stop the session">
+              ◼ Stop
+            </button>
+          ) : (
+            <button className="send-btn" onClick={onSubmit}>
+              ↵
+            </button>
+          )}
         </div>
       </div>
     </div>

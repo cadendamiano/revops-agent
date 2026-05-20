@@ -15,15 +15,16 @@ type ScoredLead = {
 function scoreLead(l: typeof LEADS[number]): ScoredLead {
   let score = 30;
   const factors: string[] = [];
-  if (l.LeadSource === 'Inbound')  { score += 25; factors.push('Inbound +25'); }
-  if (l.LeadSource === 'Partner')  { score += 20; factors.push('Partner +20'); }
-  if (l.LeadSource === 'Event')    { score += 15; factors.push('Event +15');   }
-  if (l.LeadSource === 'Outbound') { score += 5;  factors.push('Outbound +5'); }
+  if (l.LeadSource === 'Referral')        { score += 25; factors.push('Referral +25'); }
+  if (l.LeadSource === 'Repeat Customer') { score += 22; factors.push('Repeat Customer +22'); }
+  if (l.LeadSource === 'Website')         { score += 15; factors.push('Website +15');   }
+  if (l.LeadSource === 'Google Ads')      { score += 12; factors.push('Google Ads +12'); }
+  if (l.LeadSource === 'Yelp')            { score += 8;  factors.push('Yelp +8'); }
   const age = daysBetween(TODAY, l.CreatedDate);
   if (age <= 3)      { score += 25; factors.push(`Fresh ${age}d +25`); }
   else if (age <= 7) { score += 15; factors.push(`Fresh ${age}d +15`); }
   else if (age <= 14){ score += 5;  factors.push(`Recent ${age}d +5`); }
-  if (l.Status === 'Working')    { score += 10; factors.push('Working +10'); }
+  if (l.Status === 'Contacted')  { score += 10; factors.push('Contacted +10'); }
   if (l.Status === 'Qualified')  { score += 20; factors.push('Qualified +20'); }
   if (l.Status === 'Unqualified'){ score -= 30; factors.push('Unqualified -30'); }
   return {

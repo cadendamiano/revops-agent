@@ -33,15 +33,15 @@ describe('runSoql', () => {
   });
 
   it('applies WHERE with = comparison', () => {
-    const r = runSoql("SELECT Id, StageName FROM Opportunity WHERE StageName = 'Negotiation'");
+    const r = runSoql("SELECT Id, StageName FROM Opportunity WHERE StageName = 'Closed Won'");
     if ('records' in r) {
       expect(r.records.length).toBeGreaterThan(20);
-      expect(r.records.every(x => x.StageName === 'Negotiation')).toBe(true);
+      expect(r.records.every(x => x.StageName === 'Closed Won')).toBe(true);
     }
   });
 
   it('supports AND', () => {
-    const r = runSoql("SELECT Id FROM Opportunity WHERE StageName = 'Negotiation' AND Amount > 200000");
+    const r = runSoql("SELECT Id FROM Opportunity WHERE StageName = 'Quoted' AND Amount > 50000");
     if ('records' in r) {
       expect(r.records.length).toBeGreaterThan(0);
     }
@@ -55,11 +55,16 @@ describe('runSoql', () => {
   });
 
   it('supports LIKE patterns', () => {
-    const r = runSoql("SELECT Id, Name FROM Account WHERE Name LIKE 'Pacific%'");
+    const r = runSoql("SELECT Id, Name FROM Account WHERE Name LIKE '%Residence'");
     if ('records' in r) {
-      expect(r.records.length).toBe(1);
-      expect((r.records[0] as any).Name).toContain('Pacific');
+      expect(r.records.length).toBeGreaterThanOrEqual(1);
+      expect((r.records[0] as any).Name).toContain('Residence');
     }
+  });
+
+  it('supports a custom field in WHERE', () => {
+    const r = runSoql("SELECT Id FROM Opportunity WHERE Service_Type__c = 'Emergency'");
+    expect('records' in r).toBe(true);
   });
 
   it('honours ORDER BY DESC', () => {
