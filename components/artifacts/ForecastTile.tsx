@@ -24,11 +24,11 @@ function fmtMoney(v: number): string {
 
 function buildFromForecast(reportId?: string): Shape {
   const f = getPipelineForecast('Q2');
-  // commit = weighted from Closed Won + Negotiation, bestCase adds Proposal
+  // commit = weighted from Closed Won + Scheduled/Invoiced, bestCase adds Quoted
   const commit = f.byStage
-    .filter(s => s.stage === 'Closed Won' || s.stage === 'Negotiation')
+    .filter(s => s.stage === 'Closed Won' || s.stage === 'Scheduled' || s.stage === 'Invoiced' || s.stage === 'Job Complete')
     .reduce((sum, s) => sum + s.weighted, 0);
-  const bestCase = commit + f.byStage.filter(s => s.stage === 'Proposal').reduce((sum, s) => sum + s.weighted, 0);
+  const bestCase = commit + f.byStage.filter(s => s.stage === 'Quoted').reduce((sum, s) => sum + s.weighted, 0);
   return {
     commit, bestCase,
     pipeline: f.totalWeighted, quota: f.quotaTotal,

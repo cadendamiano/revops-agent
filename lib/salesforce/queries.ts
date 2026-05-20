@@ -28,10 +28,10 @@ export function computeRisks(o: Opportunity): string[] {
   if (open && o.CloseDate < TODAY) risks.push('CloseDate in past');
   const dsa = daysSinceActivity(o);
   if (open && dsa >= 30) risks.push('No activity 30d+');
-  if ((o.Amount === 0 || o.Amount == null) && (o.StageName === 'Discovery' || o.StageName === 'Proposal' || o.StageName === 'Negotiation')) {
+  if ((o.Amount === 0 || o.Amount == null) && (o.StageName === 'Quoted' || o.StageName === 'Scheduled' || o.StageName === 'Job Complete')) {
     risks.push('Missing Amount');
   }
-  if (o.StageName === 'Negotiation' && dsa >= 60) risks.push('Stage mismatch');
+  if (o.StageName === 'Quoted' && dsa >= 60) risks.push('Stuck in quote');
   if (open && (o.NextStep == null || o.NextStep.trim() === '')) risks.push('Missing NextStep');
   return risks;
 }
@@ -120,8 +120,8 @@ export function getPipelineForecast(quarter: 'Q2' | 'Q3'): PipelineForecast {
   const totalWeighted = inRange.reduce((s, o) => s + weightedAmount(o), 0);
 
   const stages: OpportunityStage[] = [
-    'Prospecting', 'Qualification', 'Discovery', 'Proposal',
-    'Negotiation', 'Closed Won', 'Closed Lost',
+    'Qualified', 'Quoted', 'Scheduled', 'Job Complete',
+    'Invoiced', 'Closed Won', 'Closed Lost',
   ];
   const byStage: ForecastByStage[] = stages.map(stage => {
     const items = inRange.filter(o => o.StageName === stage);
@@ -133,7 +133,7 @@ export function getPipelineForecast(quarter: 'Q2' | 'Q3'): PipelineForecast {
     };
   }).filter(s => s.count > 0);
 
-  const aes: User[] = USERS.filter(u => u.Role === 'AE');
+  const aes: User[] = USERS.filter(u => u.Role === 'InsideSales');
   const byOwner: ForecastByOwner[] = aes.map(u => {
     const weighted = inRange
       .filter(o => o.OwnerId === u.Id)

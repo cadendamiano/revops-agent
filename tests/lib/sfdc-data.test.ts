@@ -24,16 +24,19 @@ describe('sf_data_query', () => {
 
 describe('sf_data_search', () => {
   it('finds across name fields', async () => {
-    const r = await handleSfDataSearch({ term: 'Pacific' });
+    const r = await handleSfDataSearch({ term: 'Residence' });
     expect(r.total).toBeGreaterThan(0);
   });
 });
 
+// Stable open-opportunity IDs from the planted scenarios (always present).
+const OPEN_OPPS = ['006900001', '0069004000', '0069004001', '0069004002', '006900300'];
+
 describe('sf_data_get_record', () => {
   it('returns the known opp by id', async () => {
-    const r = await handleSfDataGetRecord({ sobject: 'Opportunity', id: '006N0001' });
+    const r = await handleSfDataGetRecord({ sobject: 'Opportunity', id: '006900001' });
     expect(r).not.toBeNull();
-    expect((r as any).Name).toContain('Northwind');
+    expect((r as any).StageName).toBe('Quoted');
   });
   it('returns null for unknown id', async () => {
     expect(await handleSfDataGetRecord({ sobject: 'Opportunity', id: 'nope' })).toBeNull();
@@ -43,36 +46,39 @@ describe('sf_data_get_record', () => {
 describe('sf_data_update', () => {
   it('stages a bulk-update at 5 records', async () => {
     const r = await handleSfDataUpdate({
-      sobject: 'Opportunity',
-      ids: ['006N0001', '006N0002', '006N0003', '006N0004', '006N0005'],
-      field: 'NextStep',
-      value: 'follow up',
+      sobject: 'Opportunity', ids: OPEN_OPPS, field: 'NextStep', value: 'follow up',
     });
     expect(r.recordCount).toBe(5);
     expect(r.stake).toBe('bulk-update');
   });
 
   it('escalates to mass-action at 26+ rows', async () => {
-    const ids = Array.from({ length: 28 }, (_, i) => `006N00${String(i + 1).padStart(2, '0')}`);
+    const ids = Array.from({ length: 28 }, (_, i) => `00Q${String(i + 1).padStart(7, '0')}`);
     const r = await handleSfDataUpdate({
-      sobject: 'Opportunity', ids, field: 'NextStep', value: 'x',
+      sobject: 'Lead', ids, field: 'Status', value: 'Working',
     });
     expect(r.stake).toBe('mass-action');
+  });
+
+  it('blocks edits to closed opportunities (guardrail)', async () => {
+    const r = await handleSfDataUpdate({
+      sobject: 'Opportunity', ids: ['006900002'], field: 'NextStep', value: 'x',
+    });
+    expect(r.recordCount).toBe(0);
+    expect(r.blocked?.length).toBe(1);
   });
 });
 
 describe('sf_data_stage_change', () => {
   it('Closed Lost is externally visible → mass-action', async () => {
     const r = await handleSfDataStageChange({
-      ids: ['006N0001'], newStage: 'Closed Lost', reason: 'cleanup',
+      ids: ['006900001'], newStage: 'Closed Lost', reason: 'cleanup',
     });
     expect(r.stake).toBe('mass-action');
   });
-  it('Discovery → bulk-update for 5 rows', async () => {
+  it('Scheduled → bulk-update for 5 rows', async () => {
     const r = await handleSfDataStageChange({
-      ids: ['006N0001', '006N0002', '006N0003', '006N0004', '006N0005'],
-      newStage: 'Discovery',
-      reason: 'reset',
+      ids: OPEN_OPPS, newStage: 'Scheduled', reason: 'reset',
     });
     expect(r.stake).toBe('bulk-update');
   });
@@ -81,7 +87,7 @@ describe('sf_data_stage_change', () => {
 describe('sf_data_delete', () => {
   it('always classifies as mass-action (irreversible)', async () => {
     const r = await handleSfDataDelete({
-      sobject: 'Opportunity', ids: ['006N0001'], reason: 'duplicate',
+      sobject: 'Opportunity', ids: ['006900001'], reason: 'duplicate',
     });
     expect(r.stake).toBe('mass-action');
   });
@@ -135,13 +141,13 @@ describe('sf_case', () => {
 
 describe('sf_activity', () => {
   it('lists activities for an opp', async () => {
-    const r = await handleSfActivityList({ relatedTo: '006H0001' });
+    const r = await handleSfActivityList({ relatedTo: '006900001' });
     expect(r.length).toBeGreaterThan(0);
   });
 
   it('stages a logged activity', async () => {
     const r = await handleSfActivityLog({
-      relatedTo: '001A0002', type: 'Call', subject: 'Test call', durationMin: 15,
+      relatedTo: '0010000002', type: 'Call', subject: 'Test call', durationMin: 15,
     });
     expect(r.stake).toBe('single-record-edit');
   });
@@ -155,7 +161,7 @@ describe('sf_approval', () => {
 
   it('stages a decision', async () => {
     const r = await handleSfApprovalDecide({
-      approvalIds: ['801A0001'], decision: 'Approved',
+      approvalIds: ['8010000001'], decision: 'Approved',
     });
     expect(r.recordCount).toBe(1);
     expect(r.stake).toBe('single-record-edit');

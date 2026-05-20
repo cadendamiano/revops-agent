@@ -95,8 +95,8 @@ export const sfDataUpdate = defineTool({
 });
 
 const OppStageEnum = z.enum([
-  'Prospecting', 'Qualification', 'Discovery', 'Proposal',
-  'Negotiation', 'Closed Won', 'Closed Lost',
+  'Qualified', 'Quoted', 'Scheduled', 'Job Complete',
+  'Invoiced', 'Closed Won', 'Closed Lost',
 ]);
 
 export const sfDataStageChange = defineTool({
@@ -183,7 +183,23 @@ export type ProposeResult = {
   preview: StagedChange[];
   requiresApproval: boolean;
   summary: string;
+  blocked?: { id: string; reason: string }[];
 };
+
+// Guardrail (PRD §7.15): closed-won / closed-lost opportunities are immutable.
+function partitionClosedOpps(ids: string[]): { editable: string[]; blocked: { id: string; reason: string }[] } {
+  const editable: string[] = [];
+  const blocked: { id: string; reason: string }[] = [];
+  for (const id of ids) {
+    const opp = OPPORTUNITIES.find(o => o.Id === id);
+    if (opp && (opp.StageName === 'Closed Won' || opp.StageName === 'Closed Lost')) {
+      blocked.push({ id, reason: `Opportunity is ${opp.StageName} and cannot be modified` });
+    } else {
+      editable.push(id);
+    }
+  }
+  return { editable, blocked };
+}
 
 export async function handleSfDataCreate(input: {
   sobject: string; fields: Record<string, unknown>;
@@ -215,8 +231,11 @@ export async function handleSfDataUpdate(input: {
   sobject: string; ids: string[]; field: string; value: unknown;
 }): Promise<ProposeResult> {
   const src = SOURCE[input.sobject] ?? [];
+  const { editable, blocked } = input.sobject === 'Opportunity'
+    ? partitionClosedOpps(input.ids)
+    : { editable: input.ids, blocked: [] as { id: string; reason: string }[] };
   const changes: StagedChange[] = [];
-  for (const id of input.ids) {
+  for (const id of editable) {
     const rec = src.find(r => r.Id === id);
     if (!rec) continue;
     changes.push({
@@ -242,6 +261,7 @@ export async function handleSfDataUpdate(input: {
     preview: changes.slice(0, 5),
     requiresApproval: stake !== 'read-only',
     summary,
+    blocked: blocked.length ? blocked : undefined,
   };
 }
 
@@ -250,8 +270,9 @@ export async function handleSfDataStageChange(input: {
 }): Promise<ProposeResult> {
   const reversible = !(input.newStage === 'Closed Won' || input.newStage === 'Closed Lost');
   const externallyVisible = input.newStage === 'Closed Lost';
+  const { editable, blocked } = partitionClosedOpps(input.ids);
   const changes: StagedChange[] = [];
-  for (const id of input.ids) {
+  for (const id of editable) {
     const opp = OPPORTUNITIES.find(o => o.Id === id);
     if (!opp) continue;
     changes.push({
@@ -277,6 +298,7 @@ export async function handleSfDataStageChange(input: {
     preview: changes.slice(0, 5),
     requiresApproval: stake !== 'read-only',
     summary,
+    blocked: blocked.length ? blocked : undefined,
   };
 }
 

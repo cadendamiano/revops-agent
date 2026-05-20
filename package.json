@@ -44,6 +44,7 @@
     "@univerjs/slides": "^0.21.1",
     "@univerjs/slides-ui": "^0.21.1",
     "@univerjs/ui": "^0.21.1",
+    "better-sqlite3": "^11.10.0",
     "braintrust": "^3.9.0",
     "electron-store": "^8.2.0",
     "next": "^14.2.34",
@@ -55,6 +56,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/get-port": "^4.0.1",
     "@types/node": "^20",
     "@types/react": "^18",

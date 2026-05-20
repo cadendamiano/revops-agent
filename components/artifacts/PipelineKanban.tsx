@@ -17,7 +17,7 @@ type OppCard = {
 
 type Column = { name: string; opps: OppCard[] };
 
-const OPEN_STAGES: OpportunityStage[] = ['Prospecting', 'Qualification', 'Discovery', 'Proposal', 'Negotiation'];
+const OPEN_STAGES: OpportunityStage[] = ['Qualified', 'Quoted', 'Scheduled', 'Job Complete', 'Invoiced'];
 
 function fmtMoney(v: number): string {
   if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(1) + 'M';

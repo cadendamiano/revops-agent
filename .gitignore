@@ -10,3 +10,6 @@ output/
 electron-dist/
 electron-next/
 dist-electron/
+
+# Local mock CRM SQLite store
+.data/

@@ -1,27 +1,15 @@
-// Minimal SOQL parser/evaluator over the SFDC_BUNDLE.
+// Minimal SOQL parser that compiles to real SQL and executes against the
+// embedded SQLite store (lib/db/sqlite.ts).
 //
 // Supports: SELECT <fields|*> FROM <sobject> [WHERE …] [ORDER BY <field> [ASC|DESC]] [LIMIT n]
 // WHERE supports: AND, OR, =, !=, <, <=, >, >=, LIKE, IN (…), NOT IN (…).
 // Date literals: TODAY, YESTERDAY, LAST_N_DAYS:N, NEXT_N_DAYS:N, THIS_QUARTER, NEXT_QUARTER, LAST_QUARTER.
 //
 // On unsupported syntax, callers receive { error: 'UNSUPPORTED_SOQL', hint }.
-
-import {
-  OPPORTUNITIES, ACCOUNTS, LEADS, CONTACTS, USERS, CASES, ACTIVITIES,
-} from './seed';
+import { getDb, TABLE_NAMES } from '@/lib/db/sqlite';
 import { TODAY } from './types';
 
 type Row = Record<string, unknown>;
-
-const SOURCE: Record<string, Row[]> = {
-  Opportunity: OPPORTUNITIES as unknown as Row[],
-  Account:     ACCOUNTS as unknown as Row[],
-  Lead:        LEADS as unknown as Row[],
-  Contact:     CONTACTS as unknown as Row[],
-  User:        USERS as unknown as Row[],
-  Case:        CASES as unknown as Row[],
-  Activity:    ACTIVITIES as unknown as Row[],
-};
 
 export type SoqlSuccess = {
   totalSize: number;
@@ -39,60 +27,62 @@ export type SoqlResult = SoqlSuccess | SoqlError;
 
 const QUERY_RE = /^\s*SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+BY\s+(\w+)(?:\s+(ASC|DESC))?)?(?:\s+LIMIT\s+(\d+))?\s*$/is;
 
+const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/; // includes custom fields like Service_Type__c
+
+function isKnownTable(name: string): boolean {
+  return TABLE_NAMES.includes(name);
+}
+
 export function runSoql(soql: string, hardLimit = 1000): SoqlResult {
   const trimmed = soql.trim().replace(/;+$/, '');
   const m = QUERY_RE.exec(trimmed);
   if (!m) {
-    return {
-      error: 'UNSUPPORTED_SOQL',
-      hint: 'Expected: SELECT <fields> FROM <sobject> [WHERE …] [ORDER BY …] [LIMIT n]',
-    };
+    return { error: 'UNSUPPORTED_SOQL', hint: 'Expected: SELECT <fields> FROM <sobject> [WHERE …] [ORDER BY …] [LIMIT n]' };
   }
   const [, rawFields, sobject, where, orderField, orderDir, limitStr] = m;
-  const source = SOURCE[sobject];
-  if (!source) {
-    return {
-      error: 'UNSUPPORTED_SOQL',
-      hint: `Unknown sObject "${sobject}". Supported: ${Object.keys(SOURCE).join(', ')}.`,
-    };
+  if (!isKnownTable(sobject)) {
+    return { error: 'UNSUPPORTED_SOQL', hint: `Unknown sObject "${sobject}". Supported: ${TABLE_NAMES.join(', ')}.` };
+  }
+  if (orderField && !IDENT_RE.test(orderField)) {
+    return { error: 'UNSUPPORTED_SOQL', hint: `Invalid ORDER BY field "${orderField}".` };
   }
 
-  const fields = parseFields(rawFields, source[0]);
-  let rows: Row[] = source.slice();
-
+  let whereSql = '';
+  let params: unknown[] = [];
   if (where) {
     try {
-      const pred = compileWhere(where);
-      rows = rows.filter(pred);
+      const node = compileWhere(where);
+      const out = nodeToSql(node);
+      whereSql = ' WHERE ' + out.sql;
+      params = out.params;
     } catch (e: any) {
-      return { error: 'UNSUPPORTED_SOQL', hint: e.message ?? 'WHERE clause not understood' };
+      return { error: 'UNSUPPORTED_SOQL', hint: e?.message ?? 'WHERE clause not understood' };
     }
   }
 
-  if (orderField) {
-    const dir = (orderDir ?? 'ASC').toUpperCase() === 'DESC' ? -1 : 1;
-    rows.sort((a, b) => cmp(a[orderField], b[orderField]) * dir);
-  }
-
   const limit = limitStr ? Math.min(parseInt(limitStr, 10), hardLimit) : hardLimit;
-  const total = rows.length;
-  rows = rows.slice(0, limit);
+  const orderSql = orderField ? ` ORDER BY "${orderField}" ${(orderDir ?? 'ASC').toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}` : '';
 
-  const projected = rows.map(r => {
-    const o: Row = {};
-    for (const f of fields) o[f] = r[f];
-    return o;
-  });
+  const db = getDb();
+  try {
+    const countRow = db.prepare(`SELECT COUNT(*) AS n FROM "${sobject}"${whereSql}`).get(...params) as { n: number };
+    const total = countRow.n;
+    const rows = db.prepare(`SELECT * FROM "${sobject}"${whereSql}${orderSql} LIMIT ?`).all(...params, limit) as Row[];
 
-  return {
-    totalSize: total,
-    done: total <= limit,
-    records: projected,
-    fields,
-  };
+    const fields = resolveFields(rawFields, rows[0]);
+    const records = rows.map(r => {
+      if (fields.length === 0) return r;
+      const o: Row = {};
+      for (const f of fields) o[f] = r[f] ?? null;
+      return o;
+    });
+    return { totalSize: total, done: total <= limit, records, fields: fields.length ? fields : Object.keys(rows[0] ?? {}) };
+  } catch (e: any) {
+    return { error: 'UNSUPPORTED_SOQL', hint: e?.message ?? 'query failed' };
+  }
 }
 
-function parseFields(raw: string, sample: Row | undefined): string[] {
+function resolveFields(raw: string, sample: Row | undefined): string[] {
   const trimmed = raw.trim();
   if (trimmed === '*' || /^FIELDS\(ALL\)$/i.test(trimmed)) {
     return sample ? Object.keys(sample) : [];
@@ -100,17 +90,15 @@ function parseFields(raw: string, sample: Row | undefined): string[] {
   return trimmed.split(',').map(s => s.trim()).filter(Boolean);
 }
 
-// ─── WHERE compiler ─────────────────────────────────────────────────
+// ─── WHERE → SQL ────────────────────────────────────────────────────
 
-type Pred = (r: Row) => boolean;
-
-function compileWhere(src: string): Pred {
+function compileWhere(src: string) {
   const tokens = tokenize(src);
   const { node, pos } = parseOr(tokens, 0);
   if (pos !== tokens.length) {
     throw new Error(`unexpected tokens after WHERE near "${tokens[pos]?.value ?? ''}"`);
   }
-  return evalNode.bind(null, node);
+  return node;
 }
 
 type Token = { type: 'word' | 'op' | 'paren' | 'string' | 'number' | 'comma'; value: string };
@@ -164,7 +152,7 @@ type Node =
   | { kind: 'or'; a: Node; b: Node }
   | { kind: 'cmp'; field: string; op: string; value: unknown }
   | { kind: 'in'; field: string; values: unknown[]; negate: boolean }
-  | { kind: 'like'; field: string; pattern: RegExp; negate: boolean };
+  | { kind: 'like'; field: string; pattern: string; negate: boolean };
 
 function parseOr(t: Token[], pos: number): { node: Node; pos: number } {
   let { node, pos: p } = parseAnd(t, pos);
@@ -195,10 +183,10 @@ function parseAtom(t: Token[], pos: number): { node: Node; pos: number } {
   }
   if (t[pos].type !== 'word') throw new Error(`expected field name at "${t[pos].value}"`);
   const field = t[pos].value;
+  if (!IDENT_RE.test(field)) throw new Error(`invalid field name "${field}"`);
   let p = pos + 1;
   if (p >= t.length) throw new Error('unexpected end after field');
   const head = t[p];
-  // NOT IN / NOT LIKE
   if (head.type === 'word' && head.value.toUpperCase() === 'NOT') {
     const inner = t[p + 1];
     if (!inner) throw new Error('expected IN or LIKE after NOT');
@@ -209,7 +197,7 @@ function parseAtom(t: Token[], pos: number): { node: Node; pos: number } {
     if (inner.type === 'word' && inner.value.toUpperCase() === 'LIKE') {
       const lit = t[p + 2];
       if (!lit || lit.type !== 'string') throw new Error('NOT LIKE needs a string literal');
-      return { node: { kind: 'like', field, pattern: likeToRegex(lit.value), negate: true }, pos: p + 3 };
+      return { node: { kind: 'like', field, pattern: lit.value, negate: true }, pos: p + 3 };
     }
     throw new Error(`unsupported NOT clause near "${inner.value}"`);
   }
@@ -220,7 +208,7 @@ function parseAtom(t: Token[], pos: number): { node: Node; pos: number } {
   if (head.type === 'word' && head.value.toUpperCase() === 'LIKE') {
     const lit = t[p + 1];
     if (!lit || lit.type !== 'string') throw new Error('LIKE needs a string literal');
-    return { node: { kind: 'like', field, pattern: likeToRegex(lit.value), negate: false }, pos: p + 2 };
+    return { node: { kind: 'like', field, pattern: lit.value, negate: false }, pos: p + 2 };
   }
   if (head.type !== 'op') throw new Error(`expected operator after "${field}" got "${head.value}"`);
   const op = head.value;
@@ -251,19 +239,11 @@ function literal(t: Token): unknown {
     if (u === 'TRUE') return true;
     if (u === 'FALSE') return false;
     if (u === 'NULL') return null;
-    // Date literals → resolved to ISO date strings.
     const d = resolveDateLiteral(u);
     if (d) return d;
-    // Bare identifier: treat as picklist string (Salesforce convention is quoted, but tolerate).
-    return t.value;
+    return t.value; // bare picklist string
   }
   throw new Error(`unsupported literal "${t.value}"`);
-}
-
-function likeToRegex(pat: string): RegExp {
-  const escaped = pat.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-  const re = escaped.replace(/%/g, '.*').replace(/_/g, '.');
-  return new RegExp('^' + re + '$', 'i');
 }
 
 function resolveDateLiteral(u: string): string | { start: string; end: string } | null {
@@ -285,48 +265,37 @@ function shiftDate(iso: string, days: number): string {
   return out.toISOString().slice(0, 10);
 }
 
-function evalNode(n: Node, r: Row): boolean {
-  if (n.kind === 'and') return evalNode(n.a, r) && evalNode(n.b, r);
-  if (n.kind === 'or')  return evalNode(n.a, r) || evalNode(n.b, r);
+function nodeToSql(n: Node): { sql: string; params: unknown[] } {
+  if (n.kind === 'and') {
+    const a = nodeToSql(n.a); const b = nodeToSql(n.b);
+    return { sql: `(${a.sql} AND ${b.sql})`, params: [...a.params, ...b.params] };
+  }
+  if (n.kind === 'or') {
+    const a = nodeToSql(n.a); const b = nodeToSql(n.b);
+    return { sql: `(${a.sql} OR ${b.sql})`, params: [...a.params, ...b.params] };
+  }
   if (n.kind === 'in') {
-    const ok = n.values.some(v => valueEq(r[n.field], v));
-    return n.negate ? !ok : ok;
+    const ph = n.values.map(() => '?').join(', ');
+    return { sql: `"${n.field}" ${n.negate ? 'NOT IN' : 'IN'} (${ph})`, params: n.values.map(coerce) };
   }
   if (n.kind === 'like') {
-    const s = r[n.field];
-    const ok = typeof s === 'string' && n.pattern.test(s);
-    return n.negate ? !ok : ok;
+    return { sql: `"${n.field}" ${n.negate ? 'NOT LIKE' : 'LIKE'} ?`, params: [n.pattern] };
   }
   // cmp
-  const lhs = r[n.field];
-  // Date-range literal (THIS_QUARTER etc.) on '=': field in [start, end]
   if (n.value && typeof n.value === 'object' && 'start' in (n.value as any)) {
     const rng = n.value as { start: string; end: string };
-    if (typeof lhs !== 'string') return false;
-    if (n.op === '=') return lhs >= rng.start && lhs <= rng.end;
-    if (n.op === '!=') return !(lhs >= rng.start && lhs <= rng.end);
+    const inRange = `("${n.field}" >= ? AND "${n.field}" <= ?)`;
+    return n.op === '!='
+      ? { sql: `NOT ${inRange}`, params: [rng.start, rng.end] }
+      : { sql: inRange, params: [rng.start, rng.end] };
   }
-  switch (n.op) {
-    case '=':  return valueEq(lhs, n.value);
-    case '!=': return !valueEq(lhs, n.value);
-    case '<':  return cmp(lhs, n.value) < 0;
-    case '<=': return cmp(lhs, n.value) <= 0;
-    case '>':  return cmp(lhs, n.value) > 0;
-    case '>=': return cmp(lhs, n.value) >= 0;
-  }
-  return false;
+  const opMap: Record<string, string> = { '=': '=', '!=': '<>', '<': '<', '<=': '<=', '>': '>', '>=': '>=' };
+  const op = opMap[n.op];
+  if (!op) throw new Error(`unsupported operator "${n.op}"`);
+  return { sql: `"${n.field}" ${op} ?`, params: [coerce(n.value)] };
 }
 
-function valueEq(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  return String(a) === String(b);
-}
-
-function cmp(a: unknown, b: unknown): number {
-  if (a == null && b == null) return 0;
-  if (a == null) return -1;
-  if (b == null) return 1;
-  if (typeof a === 'number' && typeof b === 'number') return a - b;
-  return String(a).localeCompare(String(b));
+function coerce(v: unknown): unknown {
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  return v;
 }
