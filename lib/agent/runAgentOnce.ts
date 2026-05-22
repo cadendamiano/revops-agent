@@ -1,8 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
-import { runTool, SYSTEM_PROMPT, TESTING_SYSTEM_PROMPT, type ToolContext, type ToolDef } from '@/lib/tools';
-import type { DatasetKey } from '@/lib/data';
+import { runTool, TESTING_SYSTEM_PROMPT, type ToolContext, type ToolDef } from '@/lib/tools';
 import type { ArtifactKind } from '@/lib/flows';
 import { getAnthropicKey, getGeminiKey, getLLMGatewayKey, readSecrets } from '@/lib/secrets';
 import { gatewayRemoteModelId, LLM_GATEWAY_BASE_URL, providerOf } from '@/lib/models';
@@ -16,10 +15,6 @@ export type RunAgentArgs = {
   model: string;
   userMessage: string;
   history?: ChatHistoryTurn[];
-  mode?: 'demo' | 'testing';
-  billEnvId?: string;
-  billProduct?: 'ap' | 'se';
-  demoDataset?: DatasetKey;
   forcedKind?: ArtifactKind;
   requirements?: string[];
   commandName?: string;
@@ -84,21 +79,14 @@ export async function runAgentOnce(args: RunAgentArgs): Promise<RunAgentResult> 
   const history = Array.isArray(args.history) ? args.history.slice(-10) : [];
   const provider = providerOf(args.model);
   const ctx: ToolContext = {
-    mode: args.mode ?? 'demo',
-    billEnvId: args.billEnvId,
-    billProduct: args.billProduct,
-    demoDataset: args.demoDataset,
+    mode: 'testing',
   };
 
   const secrets = await readSecrets();
-  const demoOverride = secrets.systemPromptOverrideDemo;
   const testingOverride = secrets.systemPromptOverrideTesting;
   const disabledTools = new Set(secrets.disabledTools ?? []);
 
-  const baseSystem =
-    ctx.mode === 'testing'
-      ? (testingOverride || TESTING_SYSTEM_PROMPT)
-      : (demoOverride || SYSTEM_PROMPT);
+  const baseSystem = testingOverride || TESTING_SYSTEM_PROMPT;
   const withRequirements =
     args.forcedKind && args.commandName
       ? `${baseSystem}\n\n${buildRequirementsBlock(args.commandName, args.forcedKind, args.requirements ?? [])}`
@@ -128,7 +116,7 @@ export async function runAgentOnce(args: RunAgentArgs): Promise<RunAgentResult> 
     await traced(
       async (rootSpan) => {
         rootSpan.log({
-          input: { userMessage: args.userMessage, history, mode: ctx.mode, demoDataset: ctx.demoDataset },
+          input: { userMessage: args.userMessage, history },
           metadata: { model: args.model, provider, billProduct: ctx.billProduct, forcedKind: args.forcedKind, commandName: args.commandName },
         });
         const onFinish = (t: string, it?: number, ot?: number) => {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import type { Artifact } from '@/lib/store';
-import { runSoql } from '@/lib/salesforce/soql';
 
 type Props = { artifact: Artifact };
 
@@ -30,12 +29,21 @@ export function SoqlResults({ artifact }: Props) {
         setData({ soql: parsed.soql ?? '', fields: parsed.fields, records: parsed.records });
         return;
       }
-      // Demo shape: a soql string to execute against the mock.
+      // Demo shape: a soql string to execute against the mock (server-side).
       if (typeof parsed?.soql === 'string') {
-        const r = runSoql(parsed.soql);
-        if (!('error' in r)) {
-          setData({ soql: parsed.soql, fields: r.fields, records: r.records });
-        }
+        fetch('/api/soql', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ soql: parsed.soql }),
+        })
+          .then(res => res.json())
+          .then(r => {
+            if (!('error' in r)) {
+              setData({ soql: parsed.soql, fields: r.fields, records: r.records });
+            }
+          })
+          .catch(() => {});
+        return;
       }
     } catch {
       // ignore

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Turn } from './turns';
 import type { ArtifactKind, FlowStep } from './flows';
-import { SEED_WORKSPACES } from './data';
+import { makeSeedWorkspaces } from './data';
 import type { Shortcut } from './shortcuts';
 import { mergeFlags, type FlaggedRecord, type FlagInput, type FlagKind, type FlagDisposition } from './memory/types';
 import {
@@ -16,7 +16,7 @@ import {
   type Provider,
 } from './models';
 
-export type Mode = 'demo' | 'testing';
+export type Mode = 'testing';
 // Per-session execution mode (PRD §7.2). Plan = approve every gated action;
 // Auto = pre-authorize non-mass-action batches (dual-control still prompts).
 export type ExecMode = 'plan' | 'auto';
@@ -129,7 +129,6 @@ type State = {
   setStreaming: (b: boolean) => void;
   setActiveArtifact: (id: string | null) => void;
 
-  setMode: (m: Mode) => void;
 
   execMode: ExecMode;
   setExecMode: (m: ExecMode) => void;
@@ -213,9 +212,9 @@ export const useStore = create<State>()(
         }),
       clearTokenHistory: () => set({ tokenHistory: [] }),
 
-      mode: 'demo',
+      mode: 'testing',
 
-      workspaces: SEED_WORKSPACES,
+      workspaces: [],
       activeWorkspaceId: null,
       activeWorkspaceThreadId: null,
       workspaceView: 'workspaces',
@@ -252,9 +251,6 @@ export const useStore = create<State>()(
       setComposer: (composer) => set({ composer }),
       setStreaming: (streaming) => set({ streaming }),
       setActiveArtifact: (id) => set({ activeArtifact: id }),
-
-      setMode: (mode) =>
-        set({ mode, streaming: false, composer: '', activeArtifact: null }),
 
       execMode: 'plan',
       setExecMode: (execMode) => set({ execMode }),
@@ -650,7 +646,7 @@ export const useStore = create<State>()(
     {
       name: 'bcw:state',
       storage: createJSONStorage(() => localStorage),
-      version: 10,
+      version: 11,
       migrate: (persisted: any, fromVersion: number) => {
         if (persisted && fromVersion < 2) {
           persisted.tweaks = { ...DEFAULT_TWEAKS, ...(persisted.tweaks ?? {}) };
@@ -714,6 +710,10 @@ export const useStore = create<State>()(
             }
           }
         }
+        if (persisted && fromVersion < 11) {
+          // Demo mode deprecated — coerce any persisted 'demo' to 'testing'.
+          if (persisted.mode !== 'testing') persisted.mode = 'testing';
+        }
         return persisted;
       },
       partialize: (s) => ({
@@ -746,7 +746,7 @@ export const useStore = create<State>()(
             approvalStates: t.approvalStates ?? {},
           })),
         }));
-        state.workspaces = workspaces.length > 0 ? workspaces : SEED_WORKSPACES;
+        state.workspaces = workspaces.length > 0 ? workspaces : makeSeedWorkspaces(Date.now());
         state.expandedWorkspaceIds = state.expandedWorkspaceIds ?? [];
         state.workspaceView = state.workspaceView ?? 'workspaces';
         state.shortcuts = state.shortcuts ?? [];

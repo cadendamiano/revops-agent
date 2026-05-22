@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { READ_TOOLS, WRITE_TOOLS, FORM_TOOLS, INTERNAL_TOOLS } from '@/lib/tools';
-import { SYSTEM_PROMPT, TESTING_SYSTEM_PROMPT } from '@/lib/tools';
+import { TESTING_SYSTEM_PROMPT } from '@/lib/tools';
 import type { ToolDef } from '@/lib/tools';
 
 type ToolGroup = { label: string; tools: ToolDef[]; accent: string };
@@ -110,11 +110,8 @@ function ToolGroupSection({
 
 export function ToolsColumn() {
   const [disabledTools, setDisabledTools] = useState<Set<string>>(new Set());
-  const [demoPrompt, setDemoPrompt] = useState('');
-  const [testingPrompt, setTestingPrompt] = useState('');
-  const [demoOverrideActive, setDemoOverrideActive] = useState(false);
-  const [testingOverrideActive, setTestingOverrideActive] = useState(false);
-  const [activePromptTab, setActivePromptTab] = useState<'demo' | 'testing'>('demo');
+  const [prompt, setPrompt] = useState('');
+  const [overrideActive, setOverrideActive] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -130,12 +127,9 @@ export function ToolsColumn() {
         if (cancelled) return;
         const disabled: string[] = data.disabledTools ?? [];
         setDisabledTools(new Set(disabled));
-        const demoOverride: string | null = data.systemPromptOverrideDemo ?? null;
         const testingOverride: string | null = data.systemPromptOverrideTesting ?? null;
-        setDemoPrompt(demoOverride ?? SYSTEM_PROMPT);
-        setTestingPrompt(testingOverride ?? TESTING_SYSTEM_PROMPT);
-        setDemoOverrideActive(Boolean(demoOverride));
-        setTestingOverrideActive(Boolean(testingOverride));
+        setPrompt(testingOverride ?? TESTING_SYSTEM_PROMPT);
+        setOverrideActive(Boolean(testingOverride));
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
@@ -176,8 +170,7 @@ export function ToolsColumn() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          systemPromptOverrideDemo: demoOverrideActive ? demoPrompt : null,
-          systemPromptOverrideTesting: testingOverrideActive ? testingPrompt : null,
+          systemPromptOverrideTesting: overrideActive ? prompt : null,
         }),
       });
       if (!res.ok) throw new Error('Save failed');
@@ -189,14 +182,9 @@ export function ToolsColumn() {
     }
   }
 
-  function resetPrompt(mode: 'demo' | 'testing') {
-    if (mode === 'demo') {
-      setDemoPrompt(SYSTEM_PROMPT);
-      setDemoOverrideActive(false);
-    } else {
-      setTestingPrompt(TESTING_SYSTEM_PROMPT);
-      setTestingOverrideActive(false);
-    }
+  function resetPrompt() {
+    setPrompt(TESTING_SYSTEM_PROMPT);
+    setOverrideActive(false);
   }
 
   const readGroups = groupReadTools();
@@ -205,69 +193,43 @@ export function ToolsColumn() {
   const formGroup: ToolGroup = { label: 'Form / UX', tools: FORM_TOOLS, accent: 'var(--ink-4)' };
   const internalGroup: ToolGroup = { label: 'Internal (not sent to LLM)', tools: INTERNAL_TOOLS, accent: 'var(--ink-4)' };
 
-  const currentPrompt = activePromptTab === 'demo' ? demoPrompt : testingPrompt;
-  const currentOverrideActive = activePromptTab === 'demo' ? demoOverrideActive : testingOverrideActive;
-  const defaultPrompt = activePromptTab === 'demo' ? SYSTEM_PROMPT : TESTING_SYSTEM_PROMPT;
-
   return (
     <div className="scol-body">
-      {/* System Prompts */}
+      {/* System Prompt */}
       <section className="settings-section">
         <div className="settings-section-head">
-          <span>System prompts</span>
-          <div className="prompt-tabs">
-            <button
-              className={'prompt-tab' + (activePromptTab === 'demo' ? ' active' : '')}
-              onClick={() => setActivePromptTab('demo')}
-            >
-              Demo
-              {demoOverrideActive && <span className="prompt-tab-dot" />}
-            </button>
-            <button
-              className={'prompt-tab' + (activePromptTab === 'testing' ? ' active' : '')}
-              onClick={() => setActivePromptTab('testing')}
-            >
-              Testing
-              {testingOverrideActive && <span className="prompt-tab-dot" />}
-            </button>
-          </div>
+          <span>System prompt</span>
         </div>
 
         <div className="prompt-editor-bar">
           <label className="tweak-toggle" style={{ fontSize: 12, color: 'var(--ink-2)' }}>
             <input
               type="checkbox"
-              checked={currentOverrideActive}
-              onChange={e => {
-                if (activePromptTab === 'demo') setDemoOverrideActive(e.target.checked);
-                else setTestingOverrideActive(e.target.checked);
-              }}
+              checked={overrideActive}
+              onChange={e => setOverrideActive(e.target.checked)}
             />
             Use custom prompt
           </label>
           <button
             className="settings-link"
-            onClick={() => resetPrompt(activePromptTab)}
-            disabled={currentPrompt === defaultPrompt && !currentOverrideActive}
+            onClick={() => resetPrompt()}
+            disabled={prompt === TESTING_SYSTEM_PROMPT && !overrideActive}
           >
             Reset to default
           </button>
         </div>
 
         <textarea
-          className={'prompt-editor' + (!currentOverrideActive ? ' prompt-editor--readonly' : '')}
-          value={currentPrompt}
-          onChange={e => {
-            if (activePromptTab === 'demo') setDemoPrompt(e.target.value);
-            else setTestingPrompt(e.target.value);
-          }}
-          readOnly={!currentOverrideActive}
+          className={'prompt-editor' + (!overrideActive ? ' prompt-editor--readonly' : '')}
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          readOnly={!overrideActive}
           spellCheck={false}
           rows={14}
         />
         <div className="prompt-editor-meta">
-          {currentPrompt.length.toLocaleString()} chars
-          {currentOverrideActive && currentPrompt !== defaultPrompt && (
+          {prompt.length.toLocaleString()} chars
+          {overrideActive && prompt !== TESTING_SYSTEM_PROMPT && (
             <span className="prompt-modified"> · modified</span>
           )}
         </div>

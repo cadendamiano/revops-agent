@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import type { DatasetKey } from '@/lib/data';
 import type { ArtifactKind } from '@/lib/flows';
 import { sseEncode, type Event, type ChatHistoryTurn } from '@/lib/chatRouteHelpers';
 import { runAgentOnce } from '@/lib/agent/runAgentOnce';
@@ -12,10 +11,6 @@ export async function POST(req: NextRequest) {
   const body = (await req.json()) as {
     model: string;
     userMessage: string;
-    mode?: 'demo' | 'testing';
-    billEnvId?: string;
-    billProduct?: 'ap' | 'se';
-    demoDataset?: DatasetKey;
     forcedKind?: ArtifactKind;
     requirements?: string[];
     commandName?: string;

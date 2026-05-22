@@ -1,15 +1,10 @@
 'use client';
 
-import { FLOWS, LOGISTICS_FLOWS, type ArtifactKind, type Flow, type FlowStep, type ToolRowSpec } from './flows';
+import { type ArtifactKind, type ToolRowSpec } from './flows';
 import { newId, type Turn } from './turns';
 import { useStore, getActiveWorkspaceThread, type ApprovalPayload } from './store';
 import type { FlagInput } from './memory/types';
-import { MODEL_TOOLS, INTERNAL_TOOLS } from './tools';
-
-const ALL_TOOLS = [...MODEL_TOOLS, ...INTERNAL_TOOLS];
-function toolLabel(name: string): string {
-  return ALL_TOOLS.find(t => t.name === name)?.label ?? name;
-}
+import { toolLabel } from './toolLabels';
 
 // SFDC render tools → artifact kind. Lets live (testing-mode) tool calls open
 // the rich artifacts, matching what scripted demo flows produce.
@@ -87,154 +82,6 @@ export type ForcedArtifact = {
   shortcutAllowedTools?: string[];
   shortcutSystemPrompt?: string;
 };
-
-function speedMult(s: 'fast' | 'normal' | 'slow') {
-  if (s === 'fast') return 0.3;
-  if (s === 'slow') return 2;
-  return 1;
-}
-
-export function runFlow(flowId: string) {
-  const state = useStore.getState();
-  if (state.streaming) return;
-  const registry: Record<string, Flow> = FLOWS;
-  const flow: Flow | undefined = registry[flowId] ?? (LOGISTICS_FLOWS as Record<string, Flow>)[flowId];
-  if (!flow) return;
-
-  state.setStreaming(true);
-  const mult = speedMult(state.tweaks.streamSpeed);
-
-  let acc = 0;
-  for (const step of flow.steps) {
-    const d = (step.delay ?? 300) * mult;
-    acc += d;
-    setTimeout(() => executeStep(flow, step, mult), acc);
-  }
-  setTimeout(() => useStore.getState().setStreaming(false), acc + 400);
-}
-
-function getFlowActions(s: ReturnType<typeof useStore.getState>) {
-  const wsThread = getActiveWorkspaceThread();
-  return {
-    addTurn: s.addTurnToActiveWorkspaceThread,
-    updateTurn: s.updateTurnInActiveWorkspaceThread,
-    removeTurnsByKind: s.removeTurnsByKindInActiveWorkspaceThread,
-    setArtifacts: s.setArtifactsInActiveWorkspaceThread,
-    setApprovalPayload: s.setApprovalPayloadInActiveWorkspaceThread,
-    findTurn: (id: string) => wsThread?.turns.find(t => t.id === id),
-  };
-}
-
-function executeStep(flow: Flow, step: FlowStep, mult: number) {
-  const s = useStore.getState();
-  const a = getFlowActions(s);
-  if (step.kind === 'user') {
-    a.addTurn({ id: newId('u'), kind: 'user', text: step.text });
-    return;
-  }
-  if (step.kind === 'agent-stream') {
-    const id = newId('a');
-    const turn: Turn = { id, kind: 'agent', text: '', streaming: true };
-    a.addTurn(turn);
-    const words = step.text.split(/(\s+)/);
-    let i = 0;
-    const iv = setInterval(() => {
-      i += 2 + Math.floor(Math.random() * 3);
-      const actions = getFlowActions(useStore.getState());
-      if (i >= words.length) {
-        clearInterval(iv);
-        actions.updateTurn(id, { text: step.text, streaming: false });
-      } else {
-        actions.updateTurn(id, { text: words.slice(0, i).join(''), streaming: true });
-      }
-    }, 35 * mult);
-    return;
-  }
-  if (step.kind === 'tools') {
-    const id = newId('tl');
-    a.addTurn({ id, kind: 'tools', rows: [], pending: step.rows.length });
-    step.rows.forEach((r, idx) => {
-      setTimeout(() => {
-        const actions = getFlowActions(useStore.getState());
-        const cur = actions.findTurn(id);
-        if (!cur || cur.kind !== 'tools') return;
-        actions.updateTurn(id, {
-          rows: [...cur.rows, r],
-          pending: step.rows.length - idx - 1,
-        } as Partial<Turn>);
-      }, (idx + 1) * 220 * mult);
-    });
-    return;
-  }
-  if (step.kind === 'libs') {
-    const id = newId('lb');
-    a.addTurn({ id, kind: 'libs', items: [], total: step.items.length });
-    step.items.forEach((lib, idx) => {
-      setTimeout(() => {
-        const actions = getFlowActions(useStore.getState());
-        const cur = actions.findTurn(id);
-        if (!cur || cur.kind !== 'libs') return;
-        actions.updateTurn(id, { items: [...cur.items, lib] } as Partial<Turn>);
-      }, (idx + 1) * 160 * mult);
-    });
-    return;
-  }
-  if (step.kind === 'building') {
-    a.addTurn({ id: newId('bl'), kind: 'building', label: step.label, sub: step.sub });
-    return;
-  }
-  if (step.kind === 'artifact-card') {
-    a.removeTurnsByKind('building');
-    if (flow.artifact) {
-      const art = flow.artifact;
-      a.setArtifacts(prev => (prev.find(p => p.id === art.id) ? prev : [...prev, {
-        ...art,
-        status: 'draft' as const,
-        version: 1,
-        createdBy: 'Coworker',
-      }]));
-    }
-    a.addTurn({
-      id: newId('ac'),
-      kind: 'artifact-card',
-      artifactId: step.artifactId,
-      title: step.title,
-      sub: step.sub,
-      meta: step.meta,
-      icon: step.icon,
-    });
-    return;
-  }
-  if (step.kind === 'artifact-enrich') {
-    a.setArtifacts(prev => {
-      const exists = prev.find(a => a.id === step.artifactId);
-      if (exists) {
-        return prev.map(a => a.id === step.artifactId
-          ? { ...a, ...step.patch, version: a.version + 1, editedBy: 'Coworker', editedAt: Date.now() }
-          : a);
-      }
-      return [...prev, {
-        id: step.artifactId,
-        kind: 'custom-dashboard' as ArtifactKind,
-        label: step.patch.label ?? step.artifactId,
-        filter: step.patch.filter,
-        status: 'draft' as const,
-        version: 1,
-        createdBy: 'Coworker',
-      }];
-    });
-    return;
-  }
-  if (step.kind === 'approval') {
-    a.addTurn({ id: newId('ap'), kind: 'approval', payload: step.payload });
-    a.setApprovalPayload(step.payload.batchId, step.payload);
-    return;
-  }
-  if (step.kind === 'suggest') {
-    a.addTurn({ id: newId('sg'), kind: 'suggest', items: step.items });
-    return;
-  }
-}
 
 // ─── Approval submission helpers ──────────────────────────────────────
 
@@ -422,12 +269,12 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
   s.addTurnToActiveWorkspaceThread({ id: newId('u'), kind: 'user', text: displayText });
   s.setStreaming(true);
 
-  const agentId = newId('a');
-  s.addTurnToActiveWorkspaceThread({ id: agentId, kind: 'agent', text: '', streaming: true });
-
+  // Phase-aware turn ids: text and tool-call runs alternate, so we close the
+  // current text turn when a tool call interrupts it (and vice versa). This keeps
+  // the conversation in true chronological order instead of merging every text
+  // chunk into a single turn at the top.
+  let agentId: string | null = null;
   let acc = '';
-  // Consecutive tool calls within one response accumulate into a single `tools`
-  // turn so the UI can collapse them into one "Worked on N steps" group.
   let toolsTurnId: string | null = null;
   let toolRows: ToolRowSpec[] = [];
   const toolRowIndex: Record<string, number> = {};
@@ -438,6 +285,7 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
   let pendingText = '';
   const flushText = () => {
     rafHandle = null;
+    if (!agentId) return;
     useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
       text: pendingText,
       streaming: true,
@@ -475,7 +323,7 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
         userMessage: userText,
         history,
         memory: s.flaggedMemory,
-        ...(s.mode === 'testing' ? { mode: 'testing' } : {}),
+        mode: 'testing',
         ...(opts ? {
           forcedKind: opts.forcedKind,
           requirements: opts.requirements,
@@ -502,10 +350,26 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
         let ev: any;
         try { ev = JSON.parse(json); } catch { continue; }
         if (ev.type === 'text') {
+          if (!agentId) {
+            agentId = newId('a');
+            useStore.getState().addTurnToActiveWorkspaceThread({
+              id: agentId, kind: 'agent', text: '', streaming: true,
+            });
+            acc = '';
+            toolsTurnId = null;
+          }
           acc += ev.text;
           pendingText = acc;
           scheduleText();
         } else if (ev.type === 'tool-call') {
+          if (agentId) {
+            cancelPendingText();
+            useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
+              text: acc, streaming: false,
+            });
+            agentId = null;
+            acc = '';
+          }
           const row: ToolRowSpec = {
             verb: 'EXEC',
             path: toolLabel(ev.name),
@@ -624,7 +488,11 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
           }
         } else if (ev.type === 'form-question') {
           cancelPendingText();
-          useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: acc, streaming: false });
+          if (agentId) {
+            useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: acc, streaming: false });
+            agentId = null;
+            acc = '';
+          }
           useStore.getState().addTurnToActiveWorkspaceThread({
             id: newId('fq'),
             kind: 'form-question',
@@ -635,7 +503,11 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
           });
         } else if (ev.type === 'artifact-offer') {
           cancelPendingText();
-          useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: acc, streaming: false });
+          if (agentId) {
+            useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: acc, streaming: false });
+            agentId = null;
+            acc = '';
+          }
           useStore.getState().addTurnToActiveWorkspaceThread({
             id: newId('ao'),
             kind: 'artifact-offer',
@@ -653,28 +525,44 @@ export async function runLLM(userText: string, opts?: ForcedArtifact) {
           });
         } else if (ev.type === 'done') {
           cancelPendingText();
-          useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: acc || ev.text || '', streaming: false });
+          const finalText = acc || ev.text || '';
+          if (agentId) {
+            useStore.getState().updateTurnInActiveWorkspaceThread(agentId, { text: finalText, streaming: false });
+          } else if (finalText) {
+            useStore.getState().addTurnToActiveWorkspaceThread({
+              id: newId('a'), kind: 'agent', text: finalText, streaming: false,
+            });
+          }
         } else if (ev.type === 'error') {
           cancelPendingText();
-          useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
-            text: (acc ? acc + '\n\n' : '') + formatErrorText(ev.message),
-            streaming: false,
-          });
+          const errText = formatErrorText(ev.message);
+          if (agentId) {
+            useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
+              text: (acc ? acc + '\n\n' : '') + errText,
+              streaming: false,
+            });
+          } else {
+            useStore.getState().addTurnToActiveWorkspaceThread({
+              id: newId('a'), kind: 'agent', text: errText, streaming: false,
+            });
+          }
         }
       }
     }
   } catch (e: any) {
     cancelPendingText();
-    if (e?.name === 'AbortError') {
+    const msg = e?.name === 'AbortError'
       // User terminated the session (PRD §7.13). Persist what we have.
+      ? '_Session stopped by user._'
+      : `_Couldn't reach the model. ${e?.message ?? 'unknown error'}. Set ANTHROPIC_API_KEY / GEMINI_API_KEY in .env.local and restart._`;
+    if (agentId) {
       useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
-        text: (acc ? acc + '\n\n' : '') + '_Session stopped by user._',
+        text: (acc ? acc + '\n\n' : '') + msg,
         streaming: false,
       });
     } else {
-      useStore.getState().updateTurnInActiveWorkspaceThread(agentId, {
-        text: `_Couldn't reach the model. ${e?.message ?? 'unknown error'}. Set ANTHROPIC_API_KEY / GEMINI_API_KEY in .env.local and restart._`,
-        streaming: false,
+      useStore.getState().addTurnToActiveWorkspaceThread({
+        id: newId('a'), kind: 'agent', text: msg, streaming: false,
       });
     }
   } finally {

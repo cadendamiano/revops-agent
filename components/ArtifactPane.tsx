@@ -62,12 +62,8 @@ function timeAgo(ts: number | undefined): string {
 export function ArtifactPane() {
   const showCodeView = useStore(s => s.tweaks.showCodeView);
   const setWsThreadArtifacts = useStore(s => s.setArtifactsInActiveWorkspaceThread);
-  const mode = useStore(s => s.mode);
-
   const active = useStore(s => s.activeArtifact);
   const setActive = useStore(s => s.setActiveArtifact);
-
-  const [view, setView] = useState<ViewTab>('logic');
 
   const artifacts = useStore(
     useShallow((s) => {
@@ -77,6 +73,9 @@ export function ArtifactPane() {
       return th?.artifacts ?? EMPTY_ARTIFACTS;
     })
   );
+
+  const [view, setView] = useState<ViewTab>('logic');
+  const [collapsed, setCollapsed] = useState(false);
 
   const cur = artifacts.find(a => a.id === active);
   const isOpen = !!active;
@@ -97,6 +96,18 @@ export function ArtifactPane() {
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, setActive]);
 
+  useEffect(() => {
+    const body = document.body;
+    if (collapsed) {
+      body.classList.add('artifact-pane-collapsed');
+    } else {
+      body.classList.remove('artifact-pane-collapsed');
+    }
+    return () => {
+      body.classList.remove('artifact-pane-collapsed');
+    };
+  }, [collapsed]);
+
   const closeOne = (id: string) => {
     setWsThreadArtifacts(prev => prev.filter(x => x.id !== id));
     if (active === id) setActive(null);
@@ -108,115 +119,95 @@ export function ArtifactPane() {
         className={'artifact-scrim' + (isOpen ? ' open' : '')}
         onClick={() => setActive(null)}
       />
-      <section className={'artifact-pane' + (isOpen ? ' open' : '')}>
-        <div className="artifact-tabs">
-          {artifacts.length === 0 ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 14px',
-                color: 'var(--ink-4)',
-                fontFamily: 'var(--mono)',
-                fontSize: 11.5,
-              }}
-            >
-              Artifacts · nothing open
-            </div>
-          ) : (
-            artifacts.map(a => (
-              <div
-                key={a.id}
-                className={'artifact-tab' + (active === a.id ? ' active' : '')}
-                onClick={() => setActive(a.id)}
-              >
-                <span className="icn">{glyphFor(a.kind)}</span>
-                <span>{a.label}</span>
-                <span
-                  className="close"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeOne(a.id);
-                  }}
-                >
-                  <Icon.Close />
-                </span>
-              </div>
-            ))
-          )}
-          <div className="artifact-tabs-spacer" />
-          <div className="artifact-tools">
-            <button className="icon-btn" title="Copy as link">↗</button>
-            <button className="icon-btn" title="Download">⤓</button>
-            <button
-              className="icon-btn artifact-drawer-close"
-              title="Close panel (Esc)"
-              aria-label="Close artifact panel"
-              onClick={() => setActive(null)}
-            >
-              <Icon.Close />
-            </button>
-          </div>
+      <section className={'artifact-pane' + (isOpen ? ' open' : '') + (collapsed ? ' collapsed' : '')}>
+        <div className="artifact-pane-collapse-rail">
+          <button
+            className="icon-btn artifact-collapse-btn"
+            title={collapsed ? 'Expand artifact panel' : 'Collapse artifact panel'}
+            aria-label={collapsed ? 'Expand artifact panel' : 'Collapse artifact panel'}
+            onClick={() => setCollapsed(v => !v)}
+          >
+            {collapsed ? '‹' : '›'}
+          </button>
         </div>
 
-        <div className="artifact-content">
-          {cur ? (
-            <>
-              <div className="artifact-view-bar">
-                <div className="artifact-view-tabs">
-                  {(['logic', 'preview', ...(showCodeView ? ['code'] : [])] as ViewTab[]).map(v => (
-                    <button
-                      key={v}
-                      className={'artifact-view-tab' + (view === v ? ' active' : '')}
-                      onClick={() => setView(v)}
-                    >
-                      {v === 'logic'
-                        ? 'Logic'
-                        : v === 'preview'
-                          ? mode === 'testing' ? 'Preview' : 'Ledger'
-                          : 'Code'}
-                    </button>
-                  ))}
-                </div>
-                <div className="artifact-provenance">
-                  <span className={statusBadgeClass(cur.status)}>
-                    {cur.status ?? 'draft'}
-                  </span>
-                  <span className="artifact-prov-version">
-                    {cur.editedBy && <span className="artifact-prov-dot" title="Hand-edited — logic and code may differ" />}
-                    v{cur.version ?? 1}
-                  </span>
-                  <span className="artifact-prov-sep">·</span>
-                  <span className="artifact-prov-author">
-                    {cur.createdBy ?? 'Coworker'}
-                    {cur.editedBy ? ` · ${cur.editedBy} edited ${timeAgo(cur.editedAt)}` : ''}
-                  </span>
-                </div>
+        <div className="artifact-pane-main">
+          <div className="artifact-tabs">
+            {artifacts.length === 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 14px',
+                  color: 'var(--ink-4)',
+                  fontFamily: 'var(--mono)',
+                  fontSize: 11.5,
+                }}
+              >
+                Artifacts &middot; nothing open
               </div>
+            ) : (
+              artifacts.map(a => (
+                <div
+                  key={a.id}
+                  className={'artifact-tab' + (active === a.id ? ' active' : '')}
+                  onClick={() => setActive(a.id)}
+                >
+                  <span className="icn">{glyphFor(a.kind)}</span>
+                  <span>{a.label}</span>
+                  <span
+                    className="close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeOne(a.id);
+                    }}
+                  >
+                    <Icon.Close />
+                  </span>
+                </div>
+              ))
+            )}
+            <div className="artifact-tabs-spacer" />
+            <div className="artifact-tools">
+              <button className="icon-btn" title="Copy as link">{'↗'}</button>
+              <button
+                className="icon-btn artifact-drawer-close"
+                title="Close panel (Esc)"
+                aria-label="Close artifact panel"
+                onClick={() => setActive(null)}
+              >
+                <Icon.Close />
+              </button>
+            </div>
+          </div>
 
-              <div className="artifact-body">
-                {view === 'preview' && <ArtifactPreview artifact={cur} />}
-                {view === 'code' && <ArtifactCode artifact={cur} />}
-                {view === 'logic' && cur.kind === 'spreadsheet' && (
-                  <SpreadsheetArtifact artifact={cur} />
-                )}
-                {view === 'logic' && cur.kind === 'custom-dashboard' && <HtmlArtifact artifact={cur} />}
-                {view === 'logic' && cur.kind === 'document' && <DocumentArtifact artifact={cur} />}
-                {view === 'logic' && cur.kind === 'slides' && <SlidesArtifact artifact={cur} />}
-                {view === 'logic' && cur.kind === 'soql-results' && <SoqlResults artifact={cur} />}
-                {view === 'logic' && cur.kind === 'pipeline-kanban' && <PipelineKanban artifact={cur} />}
-                {view === 'logic' && cur.kind === 'account-360' && <Account360 artifact={cur} />}
-                {view === 'logic' && cur.kind === 'lead-scoring' && <LeadScoringTable artifact={cur} />}
-                {view === 'logic' && cur.kind === 'forecast' && <ForecastTile artifact={cur} />}
-                {view === 'logic' && cur.kind === 'dashboard-tiles' && <DashboardTiles artifact={cur} />}
-                {view === 'logic' && cur.kind === 'case-sla' && <CaseSlaHeatmap artifact={cur} />}
-                {view === 'logic' && cur.kind === 'activity-timeline' && <ActivityTimeline artifact={cur} />}
-                {view === 'logic' && cur.kind === 'bulk-update-preview' && <BulkUpdatePreview artifact={cur} />}
-              </div>
-            </>
-          ) : (
-            <EmptyArtifact />
-          )}
+          <div className="artifact-content">
+            {cur ? (
+              <>
+<div className="artifact-body">
+                  {view === 'preview' && <ArtifactPreview artifact={cur} />}
+                  {view === 'code' && <ArtifactCode artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'spreadsheet' && (
+                    <SpreadsheetArtifact artifact={cur} />
+                  )}
+                  {view === 'logic' && cur.kind === 'custom-dashboard' && <HtmlArtifact artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'document' && <DocumentArtifact artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'slides' && <SlidesArtifact artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'soql-results' && <SoqlResults artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'pipeline-kanban' && <PipelineKanban artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'account-360' && <Account360 artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'lead-scoring' && <LeadScoringTable artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'forecast' && <ForecastTile artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'dashboard-tiles' && <DashboardTiles artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'case-sla' && <CaseSlaHeatmap artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'activity-timeline' && <ActivityTimeline artifact={cur} />}
+                  {view === 'logic' && cur.kind === 'bulk-update-preview' && <BulkUpdatePreview artifact={cur} />}
+                </div>
+              </>
+            ) : (
+              <EmptyArtifact />
+            )}
+          </div>
         </div>
       </section>
     </>
@@ -227,14 +218,14 @@ function EmptyArtifact() {
   return (
     <div className="artifact-empty">
       <div>
-        <div className="glyph">◫</div>
+        <div className="glyph">{'◫'}</div>
         <div>
           Artifacts the coworker creates
           <br />
           open here side-by-side.
         </div>
         <div style={{ marginTop: 12, color: 'var(--ink-3)' }}>
-          Spreadsheets · Documents · Slides · Dashboards
+          Spreadsheets &middot; Documents &middot; Slides &middot; Dashboards
         </div>
       </div>
     </div>
