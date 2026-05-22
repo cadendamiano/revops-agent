@@ -169,21 +169,11 @@ function TurnInner({
     return (
       <div className="msg agent fade-in">
         <div className="msg-body">
-          <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 4 }}>
-            Artifact ready.
-          </div>
           <div
             className={'artifact-card' + (isActive ? ' active' : '')}
             onClick={() => onOpenArtifact(turn.artifactId)}
             role="button"
           >
-            <div className="artifact-card-hero">
-              <div className="artifact-card-kind">
-                <span className="dot" />{turn.sub}
-              </div>
-              <div className="artifact-card-right-pill">{turn.icon ?? '◫'}</div>
-              <ArtifactThumb kind={turn.artifactId} />
-            </div>
             <div className="artifact-card-body">
               <div className="artifact-card-title">{turn.title}</div>
               <div className="artifact-card-meta"><Markdown text={turn.meta} /></div>

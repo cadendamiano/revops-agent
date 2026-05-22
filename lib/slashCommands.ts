@@ -1,5 +1,5 @@
 // phase-a: neutral stub. Phase B replaces with SF slash commands.
-import type { ArtifactKind, FlowId } from './flows';
+import type { ArtifactKind } from './flows';
 import type { Shortcut } from './shortcuts';
 
 export type SlashCommand = {
@@ -8,7 +8,6 @@ export type SlashCommand = {
   kind: ArtifactKind;
   label: string;
   hint: string;
-  demoFlowId: FlowId;
   requirements: string[];
 };
 
@@ -19,7 +18,6 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
     kind: 'document',
     label: 'doc',
     hint: 'Generate a structured document',
-    demoFlowId: 'doc_q1_report',
     requirements: [
       'Report title and target audience',
       'Time period covered',
@@ -34,7 +32,6 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
     kind: 'slides',
     label: 'slides',
     hint: 'Build a slide deck',
-    demoFlowId: 'slides_demo',
     requirements: [
       'Audience and purpose',
       'Core message / narrative arc',
@@ -48,7 +45,6 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
     kind: 'spreadsheet',
     label: 'sheet',
     hint: 'Open a spreadsheet artifact',
-    demoFlowId: 'sheet_demo',
     requirements: [
       'What rows / columns to render',
       'Source dataset (if any)',

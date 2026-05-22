@@ -1,4 +1,4 @@
-import { matchFlow, type ArtifactKind } from './flows';
+import type { ArtifactKind } from './flows';
 import type { SlashCommand } from './slashCommands';
 import type { ForcedArtifact } from './runtime';
 import { isShortcut, expandPrompt, buildShortcutSystemPrompt, type Shortcut } from './shortcuts';
@@ -7,30 +7,14 @@ export type ComposerSubmitState = {
   body: string;
   streaming: boolean;
   forcedCmd: SlashCommand | Shortcut | null;
-  mode: 'demo' | 'testing';
   variableValues?: Record<string, string>;
-  /** Active thread's modality-picker selection. Used in testing mode when no
-   *  slash command is present. Slash commands always win for the submit they
-   *  appear on. Ignored in demo mode (scripted flows take over). */
+  /** Active thread's modality-picker selection. Slash commands always win. */
   desiredArtifactKind?: ArtifactKind;
 };
 
 export type ComposerSubmitAction =
   | { kind: 'ignore' }
-  | { kind: 'flow'; flowId: string }
   | { kind: 'llm'; body: string; opts?: ForcedArtifact };
-
-const CUSTOM_CHART_HINTS = [
-  'line', 'treemap', 'tree map', 'heatmap', 'heat map', 'sunburst',
-  'sankey', 'scatter', 'radar', 'area', 'candlestick', 'funnel',
-  'gauge', 'waterfall', 'histogram', 'stacked', 'combo', 'dashboard',
-  'kpi', 'timeline', 'time series', 'over time',
-];
-
-function wantsCustomViz(body: string): boolean {
-  const low = body.toLowerCase();
-  return CUSTOM_CHART_HINTS.some(h => low.includes(h));
-}
 
 export function resolveComposerSubmit(s: ComposerSubmitState): ComposerSubmitAction {
   if (s.streaming) return { kind: 'ignore' };
@@ -54,14 +38,6 @@ export function resolveComposerSubmit(s: ComposerSubmitState): ComposerSubmitAct
 
   if (s.forcedCmd) {
     const cmd = s.forcedCmd as SlashCommand;
-    const forceLlm =
-      (cmd.name === 'dataviz' && wantsCustomViz(body)) ||
-      // /slides always runs the questionnaire conversation through the LLM
-      // — there is no useful canned demo flow for it.
-      cmd.name === 'slides';
-    if (s.mode === 'demo' && !forceLlm) {
-      return { kind: 'flow', flowId: cmd.demoFlowId };
-    }
     return {
       kind: 'llm',
       body,
@@ -75,19 +51,8 @@ export function resolveComposerSubmit(s: ComposerSubmitState): ComposerSubmitAct
 
   if (!body) return { kind: 'ignore' };
 
-  if (s.mode === 'testing') {
-    if (s.desiredArtifactKind) {
-      return { kind: 'llm', body, opts: { forcedKind: s.desiredArtifactKind } };
-    }
-    return { kind: 'llm', body };
+  if (s.desiredArtifactKind) {
+    return { kind: 'llm', body, opts: { forcedKind: s.desiredArtifactKind } };
   }
-
-  // In demo mode, custom-viz asks should reach the LLM even without a slash command.
-  if (wantsCustomViz(body)) {
-    return { kind: 'llm', body };
-  }
-
-  const matched = matchFlow(body);
-  if (matched) return { kind: 'flow', flowId: matched };
   return { kind: 'llm', body };
 }

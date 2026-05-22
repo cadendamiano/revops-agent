@@ -91,8 +91,6 @@ function StatusPill({ configured }: { configured: boolean }) {
 }
 
 export function CredentialsColumn() {
-  const mode = useStore(s => s.mode);
-  const setMode = useStore(s => s.setMode);
   const setSettingsStatus = useStore(s => s.setSettingsStatus);
 
   function publishStatus(next: SettingsView) {
@@ -129,10 +127,6 @@ export function CredentialsColumn() {
     })();
     return () => { cancelled = true; };
   }, []);
-
-  function toggleMode() {
-    setMode(mode === 'demo' ? 'testing' : 'demo');
-  }
 
   async function saveAll() {
     setSaving(true);
@@ -222,16 +216,6 @@ export function CredentialsColumn() {
 
   return (
     <>
-      <section className="settings-section mode-section">
-        <div className="settings-section-head">
-          <span>App mode</span>
-          <span className={'status-pill' + (mode === 'testing' ? ' warn' : ' ok')}>{mode}</span>
-        </div>
-        <button className="mode-toggle-btn" onClick={toggleMode} type="button">
-          {mode === 'demo' ? 'Switch to Test Mode' : 'Switch to Demo Mode'}
-        </button>
-      </section>
-
       {!view && !error && <div className="settings-loading">Loading…</div>}
 
       {view && (

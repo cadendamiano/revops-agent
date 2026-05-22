@@ -33,52 +33,54 @@ export function getDataset(_key: DatasetKey = 'default') {
 
 const DAY = 86_400_000;
 
-export const SEED_WORKSPACES: Workspace[] = [
-  {
-    id: 'ws_sessions',
-    name: 'Sessions',
-    icon: '◎',
-    color: 'oklch(0.78 0.06 250)',
-    createdAt: Date.now() - 40 * DAY,
-    threads: [
-      {
-        id: 'thr_seed_today',
-        title: 'Q2 pipeline check-in',
-        createdAt: Date.now(),
-        turns: [],
-        artifacts: [],
-        approvalStates: {},
-        approvalPayloads: {},
-        pinned: true,
-      },
-      {
-        id: 'thr_seed_week',
-        title: 'Cold lead re-engagement',
-        createdAt: Date.now() - 3 * DAY,
-        turns: [],
-        artifacts: [],
-        approvalStates: {},
-        approvalPayloads: {},
-      },
-      {
-        id: 'thr_seed_month',
-        title: 'Forecast assumptions review',
-        createdAt: Date.now() - 12 * DAY,
-        turns: [],
-        artifacts: [],
-        approvalStates: {},
-        approvalPayloads: {},
-      },
-      {
-        id: 'thr_seed_older',
-        title: 'Data hygiene sweep',
-        createdAt: Date.now() - 45 * DAY,
-        turns: [],
-        artifacts: [],
-        approvalStates: {},
-        approvalPayloads: {},
-      },
-    ],
-    files: [],
-  },
-];
+export function makeSeedWorkspaces(now: number): Workspace[] {
+  return [
+    {
+      id: 'ws_sessions',
+      name: 'Sessions',
+      icon: '◎',
+      color: 'oklch(0.78 0.06 250)',
+      createdAt: now - 40 * DAY,
+      threads: [
+        {
+          id: 'thr_seed_today',
+          title: 'Q2 pipeline check-in',
+          createdAt: now,
+          turns: [],
+          artifacts: [],
+          approvalStates: {},
+          approvalPayloads: {},
+          pinned: true,
+        },
+        {
+          id: 'thr_seed_week',
+          title: 'Cold lead re-engagement',
+          createdAt: now - 3 * DAY,
+          turns: [],
+          artifacts: [],
+          approvalStates: {},
+          approvalPayloads: {},
+        },
+        {
+          id: 'thr_seed_month',
+          title: 'Forecast assumptions review',
+          createdAt: now - 12 * DAY,
+          turns: [],
+          artifacts: [],
+          approvalStates: {},
+          approvalPayloads: {},
+        },
+        {
+          id: 'thr_seed_older',
+          title: 'Data hygiene sweep',
+          createdAt: now - 45 * DAY,
+          turns: [],
+          artifacts: [],
+          approvalStates: {},
+          approvalPayloads: {},
+        },
+      ],
+      files: [],
+    },
+  ];
+}

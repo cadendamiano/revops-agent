@@ -1,15 +1,12 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/lib/store';
 import type { ArtifactKind } from '@/lib/flows';
 
 type Option = { kind: ArtifactKind | null; label: string; hint: string };
 
-/** Visible options. liquidity-burndown, sweep-rule, spend-chart, crm-flow, ap-table
- *  are intentionally excluded until their renderers are refactored to be
- *  dataJson-driven (Steps 3–6 of the test-mode generic-artifacts plan).
- *  Picking them today would render demo data even in test mode. */
 const OPTIONS: Option[] = [
   { kind: null,           label: 'Auto',        hint: 'Let the model choose' },
   { kind: 'spreadsheet',  label: 'Spreadsheet', hint: 'Tabular data, formulas' },
@@ -28,25 +25,65 @@ export function ModalityPicker() {
   );
   const setDesired = useStore(s => s.setActiveWorkspaceThreadDesiredArtifactKind);
 
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const current = OPTIONS.find(o => (o.kind ?? undefined) === desired) ?? OPTIONS[0];
+  const isOverridden = desired !== undefined;
+
   return (
-    <div className="modality-picker" role="radiogroup" aria-label="Desired artifact format">
-      {OPTIONS.map(opt => {
-        const selected = (opt.kind ?? undefined) === desired;
-        return (
-          <button
-            key={opt.label}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            title={opt.hint}
-            disabled={streaming}
-            className={'modality-chip' + (selected ? ' selected' : '')}
-            onClick={() => setDesired(selected ? undefined : (opt.kind ?? undefined))}
-          >
-            {opt.label}
-          </button>
-        );
-      })}
+    <div className="modality-picker" ref={wrapRef}>
+      <button
+        type="button"
+        className={'modality-trigger' + (isOverridden ? ' is-set' : '')}
+        disabled={streaming}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={`Output: ${current.label} — ${current.hint}`}
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className="modality-trigger-plus" aria-hidden>+</span>
+        {isOverridden && <span className="modality-trigger-label">{current.label}</span>}
+      </button>
+      {open && (
+        <div className="modality-menu" role="menu">
+          {OPTIONS.map(opt => {
+            const selected = (opt.kind ?? undefined) === desired;
+            return (
+              <button
+                key={opt.label}
+                type="button"
+                role="menuitemradio"
+                aria-checked={selected}
+                className={'modality-menu-item' + (selected ? ' selected' : '')}
+                onClick={() => {
+                  setDesired(opt.kind ?? undefined);
+                  setOpen(false);
+                }}
+              >
+                <span className="modality-menu-label">{opt.label}</span>
+                <span className="modality-menu-hint">{opt.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

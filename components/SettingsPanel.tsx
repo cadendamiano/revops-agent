@@ -84,8 +84,6 @@ function toDraft(env: BillEnvView): BillDraft {
 
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
-  const mode = useStore(s => s.mode);
-  const setMode = useStore(s => s.setMode);
   const showCodeView = useStore(s => s.tweaks.showCodeView);
   const darkMode = useStore(s => s.tweaks.darkMode);
   const setTweak = useStore(s => s.setTweak);
@@ -127,11 +125,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       cancelled = true;
     };
   }, []);
-
-  function toggleMode() {
-    setMode(mode === 'demo' ? 'testing' : 'demo');
-    onClose();
-  }
 
   async function saveAll() {
     setSaving(true);
@@ -264,23 +257,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </label>
           <div className="settings-help">
             When enabled, a Code tab appears on artifacts showing a read-only parameterized representation of the logic.
-          </div>
-        </section>
-
-        <section className="settings-section mode-section">
-          <div className="settings-section-head">
-            <span>App mode</span>
-            <span className={'status-pill' + (mode === 'testing' ? ' warn' : ' ok')}>
-              {mode}
-            </span>
-          </div>
-          <button className="mode-toggle-btn" onClick={toggleMode} type="button">
-            {mode === 'demo' ? 'Switch to Test Mode' : 'Switch to Demo Mode'}
-          </button>
-          <div className="settings-help">
-            {mode === 'demo'
-              ? 'Demo mode runs scripted flows and mocks. Switch to Test Mode to call real Bill sandbox APIs.'
-              : 'Test Mode sends every prompt to the real LLM and calls the configured Bill sandbox for each thread.'}
           </div>
         </section>
 

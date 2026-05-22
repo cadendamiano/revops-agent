@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useStore, getActiveWorkspaceThread } from '@/lib/store';
-import { runFlow, runLLM, stopLLM } from '@/lib/runtime';
+import { runLLM, stopLLM } from '@/lib/runtime';
 import { ModelPicker } from './ModelPicker';
 import { ModalityPicker } from './ModalityPicker';
 import { matchSlashPrefixWithShortcuts, parseSlashWithShortcuts } from '@/lib/slashCommands';
@@ -35,7 +35,6 @@ export function Composer() {
   const composer = useStore(s => s.composer);
   const setComposer = useStore(s => s.setComposer);
   const streaming = useStore(s => s.streaming);
-  const mode = useStore(s => s.mode);
   const modelId = useStore(s => s.tweaks.modelId);
   const settingsStatus = useStore(s => s.settingsStatus);
   const setSettingsStatus = useStore(s => s.setSettingsStatus);
@@ -73,12 +72,6 @@ export function Composer() {
     })();
     return () => { cancelled = true; };
   }, [settingsStatus, setSettingsStatus]);
-
-  // Clear forced command when mode changes.
-  useEffect(() => {
-    setForcedCmd(null);
-    setMenuOpen(false);
-  }, [mode]);
 
   // Clear forced command when active workspace thread changes.
   useEffect(() => {
@@ -135,7 +128,6 @@ export function Composer() {
       body: composer,
       streaming,
       forcedCmd,
-      mode,
       desiredArtifactKind: getActiveWorkspaceThread()?.desiredArtifactKind,
     });
 
@@ -145,10 +137,6 @@ export function Composer() {
     setForcedCmd(null);
     setMenuOpen(false);
 
-    if (action.kind === 'flow') {
-      runFlow(action.flowId);
-      return;
-    }
     runLLM(action.body, action.opts);
   };
 
@@ -191,14 +179,10 @@ export function Composer() {
     }
   };
 
-  const placeholder =
-    mode === 'testing'
-      ? 'Ask something -- calls the real Bill sandbox (set default in Cmd+K)'
-      : `Ask the coworker something — e.g. "show me all overdue AP" or "/" for commands`;
+  const placeholder = 'Ask something — type a prompt or "/" for commands';
 
   return (
     <div className="composer">
-      {mode === 'testing' && <ModalityPicker />}
       <div className="composer-shell">
         {menuOpen && (
           <SlashMenu
@@ -237,6 +221,7 @@ export function Composer() {
           style={{ opacity: streaming ? 0.55 : 1 }}
         />
         <div className="composer-actions">
+          <ModalityPicker />
           <ExecModeToggle />
           <div className="composer-spacer" />
           <ModelPicker />
